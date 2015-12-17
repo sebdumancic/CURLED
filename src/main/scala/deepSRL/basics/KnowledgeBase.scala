@@ -163,6 +163,25 @@ class KnowledgeBase(
     }
   }
 
+  def printAsTarget(filename: String, asFormat: String = "tilde") = {
+    //assumes all predicates are in the form Class(element)
+    val writer = new BufferedWriter(new FileWriter(filename, true))
+
+    try {
+      getPredicateNames.map(getPredicate).filter(_.arity == 1).foreach(predicate => {
+        predicate.getTrueGroundings.foreach(ground => {
+          writer.write(Format.tildeFormat("target", ground.head + "," + predicate.getName) + "\n")
+        })
+      })
+    }
+    catch {
+      case e: Exception => println(e.getMessage + "\n" + e.getLocalizedMessage + "\n" + e.getStackTrace)
+    }
+    finally {
+      writer.close()
+    }
+  }
+
 }
 
 
