@@ -3,7 +3,7 @@ package deepSRL.basics
 import java.io.{BufferedWriter, FileWriter}
 
 import deepSRL.utils.Helper
-
+import deepSRL.formats.Format
 
 /**
  *  This class implements a knowledge base managing predicates and their true groundings
@@ -141,6 +141,26 @@ class KnowledgeBase(
     }
 
     writer.close()
+  }
+
+  def printToFile(filename: String, asFormat: String = "MLN") = {
+    val writer = new BufferedWriter(new FileWriter(filename))
+
+    // generate everything except target predicate
+    try {
+      getPredicateNames.map(getPredicate).foreach(predicate => {
+        predicate.getTrueGroundings.foreach(ground => writer.write(asFormat match {
+          case "tilde" => Format.tildeFormat(predicate.getName, ground.mkString(",")) + "\n"
+          case "MLN" => Format.MLNFormatFact(predicate.getName, ground.mkString(",")) + "\n"
+        }))
+      })
+    }
+    catch {
+      case e: Exception => println(e.getMessage, e.getStackTrace, e.getCause)
+    }
+    finally {
+      writer.close()
+    }
   }
 
 }
