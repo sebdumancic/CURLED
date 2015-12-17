@@ -9,8 +9,12 @@ object Format {
     predicate.toLowerCase + "(" + arguments.toLowerCase + ")."
   }
 
-  def MLNFormat(predicate: String, arguments: String) = {
+  def MLNFormatFact(predicate: String, arguments: String) = {
     predicate.capitalize + "(" + arguments.split(",").map( _.capitalize ).mkString(",") + ")"
+  }
+
+  def MLNFormatDefinition(predicate: String, arguments: String) = {
+    predicate.capitalize + "(" + arguments.split(",").map( _.toLowerCase() ).mkString(",") + ")"
   }
 
 }
