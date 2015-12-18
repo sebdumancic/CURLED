@@ -150,7 +150,7 @@ class KnowledgeBase(
     try {
       getPredicateNames.map(getPredicate).foreach(predicate => {
         predicate.getTrueGroundings.foreach(ground => writer.write(asFormat match {
-          case "tilde" => Format.tildeFormat(predicate.getName, ground.mkString(",")) + "\n"
+          case "tilde" => Format.tildeFormatFact(predicate.getName, ground.mkString(",")) + "\n"
           case "MLN" => Format.MLNFormatFact(predicate.getName, ground.mkString(",")) + "\n"
         }))
       })
@@ -170,7 +170,7 @@ class KnowledgeBase(
     try {
       getPredicateNames.map(getPredicate).filter(_.arity == 1).foreach(predicate => {
         predicate.getTrueGroundings.foreach(ground => {
-          writer.write(Format.tildeFormat("target", ground.head + "," + predicate.getName) + "\n")
+          writer.write(Format.tildeFormatFact("target", ground.head + "," + predicate.getName) + "\n")
         })
       })
     }
