@@ -49,7 +49,7 @@ object EnhancedDataset {
     })
 
     try {
-      queries.foreach(query => {
+      queries.toList.sortBy( _.count( c => c == ',') ).foreach(query => {
         val domDesc = query.replace(",", "")
         try {
           cluster.getAllClusters(query.split(",").toList, subSample = false).zipWithIndex.foreach(clusterContent => {
