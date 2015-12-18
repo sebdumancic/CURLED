@@ -384,7 +384,7 @@ class RelationalClusteringInitialization( val knowledgeBase: KnowledgeBase,
       else { getKnowledgeBase.getDomain(dom).getElementsAsList}
     })
 
-    reducedDomainsToCombine.reduceLeft((x, y) => { for {xs <- x; ys <- y} yield xs ::: ys }).filter( x => x.toSet.size == domains.length ).map( x => { if ( domains.toSet.size == domains.length) {x} else {x.sorted}}).toList
+    reducedDomainsToCombine.reduceLeft((x, y) => { for {xs <- x; ys <- y} yield xs ::: ys }).toList
   }
 
   def fastSameRelationSimilarity(domains: List[String], domainElements: List[List[String]]) = {
