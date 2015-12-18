@@ -129,6 +129,9 @@ object EnhancedDataset {
       prepareTildeSettings(root + s"/tilde_settings_layer$layer.s", currentKB, testKB)
       formatKnowledgeBase(currentKB, root + s"/tilde_layer$layer.kb", "tilde")
     })
+
+    testKB.printAsTarget(root + s"/tilde_target.kb", "tilde")
+    testKB.printAsTarget(root + s"/mln_target.kb", "MLN")
   }
 
   def main(args: Array[String]) {
