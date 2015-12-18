@@ -5,8 +5,12 @@ package deepSRL.formats
   */
 object Format {
 
-  def tildeFormat(predicate: String, arguments: String) = {
+  def tildeFormatFact(predicate: String, arguments: String) = {
     predicate.toLowerCase + "(" + arguments.toLowerCase + ")."
+  }
+
+  def tildeFormatDefinition(predicate: String, arguments: String) = {
+    predicate.toLowerCase + "(" + arguments.split(",").map( "+-" + _.toLowerCase ).mkString(",") + ")"
   }
 
   def MLNFormatFact(predicate: String, arguments: String) = {
