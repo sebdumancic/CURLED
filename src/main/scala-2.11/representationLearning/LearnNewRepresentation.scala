@@ -1,6 +1,6 @@
 package representationLearning
 
-import java.io.{BufferedWriter, FileWriter}
+import java.io.{BufferedWriter, FileWriter, PrintWriter}
 
 import org.clapper.argot.ArgotParser
 import relationalClustering.bagComparison.bagCombination.{IntersectionCombination, UnionCombination}
@@ -200,6 +200,12 @@ object LearnNewRepresentation {
         })
       }
 
+    }
+    catch {
+      case e: Exception => println(s"ERROR: ${e.getMessage}\n \t ${e.getStackTrace}")
+        val writeError = new PrintWriter(s"${rootFolder.value.getOrElse("./tmp")}/error.log")
+        e.printStackTrace(writeError)
+        writeError.close()
     }
     finally {
       kbWriter.close()
