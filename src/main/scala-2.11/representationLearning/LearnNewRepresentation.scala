@@ -49,7 +49,7 @@ object LearnNewRepresentation {
     * */
   def existsConnection(doms: List[String], knowledgeBase: KnowledgeBase) = {
     knowledgeBase.getPredicateNames.map(knowledgeBase.getPredicate).filter( _.getRole == Settings.ROLE_HYPEREDGE).foldLeft(false)( (acc, pred) => {
-      acc || pred.getDomains.combinations(doms.length).map(_.toList).contains(doms)
+      acc || pred.getDomains.sorted.combinations(doms.length).map(_.toList).contains(doms)
     })
   }
 
@@ -192,7 +192,7 @@ object LearnNewRepresentation {
           val selectedCluster = clusterSelector.selectFromClusters(createdClusters)
           selectedCluster.zipWithIndex.foreach(clust => {
             headerWriter.write(s"Cluster_${comb.mkString("_")}${clust._2}(${comb.mkString(",")})\n")
-            declarationsWriter.write(s"Cluster_${comb.mkString("_")}${clust._2}(${comb.map(x => "name")})\n")
+            declarationsWriter.write(s"Cluster_${comb.mkString("_")}${clust._2}(${comb.map(x => "name").mkString(",")})\n")
             kbWriter.write(clust._1.map(elem => s"Cluster_${comb.mkString("_")}${clust._2}(${elem.replace(":",",")})").mkString("\n") + "\n")
           })
 
