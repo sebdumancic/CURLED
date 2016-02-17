@@ -4,8 +4,8 @@ version := "1.0"
 
 scalaVersion := "2.11.7"
 
-mainClass in assembly := some("deepSRL.EnhancedDataset")
-assemblyJarName := "EnhanceDataset.jar"
+mainClass in assembly := some("representationLearning.LearnNewRepresentation")
+assemblyJarName := "LearnNewRepresentation.jar"
 
 libraryDependencies += "org.clapper" %% "argot" % "1.0.3"
 
