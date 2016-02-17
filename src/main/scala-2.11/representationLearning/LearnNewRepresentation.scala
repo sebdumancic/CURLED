@@ -175,14 +175,14 @@ object LearnNewRepresentation {
             case "predefined" => new PredefinedNumber(k.value.getOrElse(2))
             case "silhouette" =>
               val clusterEvaluation = new SilhouetteScore(rootFolder.value.getOrElse("./tmp"))
-              new ModelBasedSelection(filename._1, filename._2.map(_.mkString(",")), clusterEvaluation)
+              new ModelBasedSelection(filename._1, filename._2.map(_.mkString(":")), clusterEvaluation)
           }
 
           val selectedCluster = clusterSelector.selectFromClusters(createdClusters)
           selectedCluster.zipWithIndex.foreach(clust => {
             headerWriter.write(s"Cluster_${comb.mkString("_")}${clust._2}(${comb.mkString(",")})\n")
             declarationsWriter.write(s"Cluster_${comb.mkString("_")}${clust._2}(${comb.map(x => "name")})\n")
-            kbWriter.write(clust._1.map(elem => s"Cluster_${comb.mkString("_")}${clust._2}($elem)").mkString("\n") + "\n")
+            kbWriter.write(clust._1.map(elem => s"Cluster_${comb.mkString("_")}${clust._2}(${elem.replace(":",",")})").mkString("\n") + "\n")
           })
 
           // clear the cache for the next domain
