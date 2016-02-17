@@ -2,7 +2,6 @@ package representationLearning
 
 import java.io.{BufferedWriter, FileWriter}
 
-import deepSRL.utils.Helper
 import org.clapper.argot.ArgotParser
 import relationalClustering.bagComparison.bagCombination.{IntersectionCombination, UnionCombination}
 import relationalClustering.bagComparison.{ChiSquaredDistance, MaximumSimilarity, MinimumSimilarity, Unionsimilarity}
@@ -10,7 +9,7 @@ import relationalClustering.clustering.evaluation.SilhouetteScore
 import relationalClustering.clustering.{Hierarchical, Spectral}
 import relationalClustering.representation.KnowledgeBase
 import relationalClustering.similarity.{SimilarityNTv2, SimilarityNeighbourhoodTrees}
-import relationalClustering.utils.PredicateDeclarations
+import relationalClustering.utils.{Helper, PredicateDeclarations}
 import representationLearning.clusterSelection.{ModelBasedSelection, PredefinedNumber}
 
 /**
