@@ -9,7 +9,7 @@ import relationalClustering.clustering.evaluation.SilhouetteScore
 import relationalClustering.clustering.{Hierarchical, Spectral}
 import relationalClustering.representation.KnowledgeBase
 import relationalClustering.similarity.{SimilarityNTv2, SimilarityNeighbourhoodTrees}
-import relationalClustering.utils.{Helper, PredicateDeclarations}
+import relationalClustering.utils.{Helper, PredicateDeclarations, Settings}
 import representationLearning.clusterSelection.{ModelBasedSelection, PredefinedNumber}
 
 /**
@@ -41,6 +41,17 @@ object LearnNewRepresentation {
   val k = parser.option[Int](List("k"), "n", "desired number of clusters in 'predefined' selection method is used")
   val kPerDomain = parser.option[String](List("kDomain"), "comma-separated list of domain:numClusters", "number of clusters per domain")
   val clusterEdges = parser.flag[Boolean](List("clusterHyperedges"), "should hyperedges be clusters as well (between the specified domains)")
+
+  /** Checks whether a hyperEdge between specified domains exists in a knowledge base
+    *
+    * @param doms list of domains in a hyperEdge
+    * @return [[Boolean]]
+    * */
+  def existsConnection(doms: List[String], knowledgeBase: KnowledgeBase) = {
+    knowledgeBase.getPredicateNames.map(knowledgeBase.getPredicate).filter( _.getRole == Settings.ROLE_HYPEREDGE).foldLeft(false)( (acc, pred) => {
+      acc || pred.getDomains.combinations(doms.length).map(_.toList).contains(doms)
+    })
+  }
 
   def main(args: Array[String]) {
     parser.parse(args)
@@ -162,7 +173,7 @@ object LearnNewRepresentation {
       // CLUSTER LINKS BETWEEN THESE DOMAINS
       if (clusterEdges.value.getOrElse(false) && domainsToCluster.length > 1) {
 
-        domainsToCluster.sorted.combinations(2).foreach(comb => {
+        (domainsToCluster ++ domainsToCluster).sorted.combinations(2).filter(com => existsConnection(com, KnowledgeBase)).foreach(comb => {
           var createdClusters = List[Set[List[String]]]()
           val filename = similarityMeasure.getHyperEdgeSimilaritySave(comb, rootFolder.value.getOrElse("./tmp"))
 
