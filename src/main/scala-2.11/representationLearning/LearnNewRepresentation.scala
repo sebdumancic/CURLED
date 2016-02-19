@@ -186,7 +186,7 @@ object LearnNewRepresentation {
           val filename = similarityMeasure.getHyperEdgeSimilaritySave(comb, rootFolder.value.getOrElse("./tmp"))
 
           (2 until maxNumberOfClusters.value.getOrElse(10)).foreach(numCl => {
-            createdClusters = createdClusters :+ clustering.clusterFromFile(filename._1, numCl)
+            createdClusters = createdClusters :+ clustering.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
           })
 
           // cluster selection method
