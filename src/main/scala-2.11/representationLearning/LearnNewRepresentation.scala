@@ -5,12 +5,12 @@ import java.io.{BufferedWriter, FileWriter, PrintWriter}
 import org.clapper.argot.ArgotParser
 import relationalClustering.bagComparison.bagCombination.{IntersectionCombination, UnionCombination}
 import relationalClustering.bagComparison.{ChiSquaredDistance, MaximumSimilarity, MinimumSimilarity, Unionsimilarity}
-import relationalClustering.clustering.evaluation.SilhouetteScore
+import relationalClustering.clustering.evaluation.{AverageIntraClusterSimilarity, SilhouetteScore}
 import relationalClustering.clustering.{Hierarchical, Spectral}
 import relationalClustering.representation.KnowledgeBase
 import relationalClustering.similarity.{SimilarityNTv2, SimilarityNeighbourhoodTrees}
 import relationalClustering.utils.{Helper, PredicateDeclarations, Settings}
-import representationLearning.clusterSelection.{ModelBasedSelection, PredefinedNumber}
+import representationLearning.clusterSelection.{IncreaseSaturationCut, ModelBasedSelection, PredefinedNumber}
 
 /**
   * CLI implementing the functionality of learning new representation with
@@ -36,7 +36,9 @@ object LearnNewRepresentation {
   val useLocalRepository = parser.flag[Boolean](List("localRepo"), "should NodeRepository be constructed locally for each NeighbourhoodGraph, or one globally shared")
   val query = parser.option[String](List("query"), "comma-separated list", "list of domains to cluster; if not set, all domains are clustered")
   val maxNumberOfClusters = parser.option[Int](List("maxClusters"), "n", "maximal number of clusters to create, per domain")
-  val selectionMethod = parser.option[String](List("selection"), "predefined|silhouette", "how to select the number of clusters per domain")
+  val selectionMethod = parser.option[String](List("selection"), "predefined|model|saturation", "how to select the number of clusters per domain")
+  val clusteringValidation = parser.option[String](List("clusterValidation"), "silhouette|intraClusterSimilarity", "cluster validation method")
+  val tradeOffFactor = parser.option[Double](List("saturationTradeOff"), "Double", "saturation trade off parameter: sim(i) >= w * sim(i+1) [default: 0.9]")
   val outputName = parser.option[String](List("output"), "string", "name of the file to save new layer [default:newLayer.*]")
   val k = parser.option[Int](List("k"), "n", "desired number of clusters in 'predefined' selection method is used")
   val kPerDomain = parser.option[String](List("kDomain"), "comma-separated list of domain:numClusters", "number of clusters per domain")
@@ -120,6 +122,13 @@ object LearnNewRepresentation {
         new Hierarchical(linkage.value.getOrElse("average"), rootFolder.value.getOrElse("./tmp"))
     }
 
+    //cluster validation
+    val clusterValidationMethod = clusteringValidation.value.getOrElse("intraClusterSimilarity") match {
+      case "silhouette" => new SilhouetteScore(rootFolder.value.getOrElse("./tmp"))
+      case "intraClusterSimilarity" => new AverageIntraClusterSimilarity()
+    }
+
+
     val kbWriter = new BufferedWriter(new FileWriter(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.kb"))
     val headerWriter = new BufferedWriter(new FileWriter(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.def"))
     val declarationsWriter = new BufferedWriter(new FileWriter(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.decl"))
@@ -141,9 +150,8 @@ object LearnNewRepresentation {
         // cluster selection method
         val clusterSelector = selectionMethod.value.getOrElse("predefined") match {
           case "predefined" => new PredefinedNumber(domain._2)
-          case "silhouette" =>
-            val clusterEvaluation = new SilhouetteScore(rootFolder.value.getOrElse("./tmp"))
-            new ModelBasedSelection(filename._1, filename._2.map(_._1), clusterEvaluation)
+          case "model" => new ModelBasedSelection(filename._1, filename._2.map(_._1), clusterValidationMethod)
+          case "saturation" => new IncreaseSaturationCut(filename._1, filename._2.map(_._1), clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
         }
 
 
@@ -184,9 +192,8 @@ object LearnNewRepresentation {
           // cluster selection method
           val clusterSelector = selectionMethod.value.getOrElse("predefined") match {
             case "predefined" => new PredefinedNumber(k.value.getOrElse(2))
-            case "silhouette" =>
-              val clusterEvaluation = new SilhouetteScore(rootFolder.value.getOrElse("./tmp"))
-              new ModelBasedSelection(filename._1, filename._2.map(_.mkString(":")), clusterEvaluation)
+            case "model" => new ModelBasedSelection(filename._1, filename._2.map(_.mkString(":")), clusterValidationMethod)
+            case "saturation" => new IncreaseSaturationCut(filename._1, filename._2.map(_.mkString(":")), clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
           }
 
           val selectedCluster = clusterSelector.selectFromClusters(createdClusters)
