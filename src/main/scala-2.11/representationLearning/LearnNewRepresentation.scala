@@ -21,7 +21,7 @@ object LearnNewRepresentation {
   //parser specification
   import org.clapper.argot.ArgotConverters._
 
-  val parser = new ArgotParser("LearnNewRepresentation.jar", preUsage = Some("Version 1.0"))
+  val parser = new ArgotParser("LearnNewRepresentation.jar", preUsage = Some("Version 1.1"))
   val dbs = parser.multiOption[String](List("db"), "knowledgeBase", "database(s) with data to cluster")
   val head = parser.option[String](List("domain"), "domain definition", "header for the knowledge base(s); specification of logical predicates")
   val declarationFile = parser.option[String](List("declarations"), "file path", "file containing declarations of predicates")
