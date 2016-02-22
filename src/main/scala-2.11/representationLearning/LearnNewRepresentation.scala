@@ -143,7 +143,7 @@ object LearnNewRepresentation {
     val headerWriter = new BufferedWriter(new FileWriter(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.def"))
     val declarationsWriter = new BufferedWriter(new FileWriter(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.decl"))
 
-    val parameterSets = weights.value.getOrElse("0.2,0.2,0.2,0.2,0.2").split(";").toList.map( par => par.split(",").toList.map( _.toDouble ))
+    val parameterSets = weights.value.getOrElse("0.2,0.2,0.2,0.2,0.2").split(":").toList.map( par => par.split(",").toList.map( _.toDouble ))
 
     try {
       val onset = maxNumberOfClusters.value.getOrElse(10)
