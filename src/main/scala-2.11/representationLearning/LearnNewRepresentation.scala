@@ -27,7 +27,7 @@ object LearnNewRepresentation {
   val declarationFile = parser.option[String](List("declarations"), "file path", "file containing declarations of predicates")
   val depth = parser.option[Int](List("depth"), "n", "depth of the neighbourhood graph")
   val rootFolder = parser.option[String](List("root"), "filePath", "folder to place files in")
-  val weights = parser.option[String](List("weights"), "Array[Double]", "comma-separated list of weights [attributes,attribute distribution,connections,vertex neighbourhood, edge distribution]")
+  val weights = parser.option[String](List("weights"), "Array[Double]", "semi-colon separated list of parameter sets; each set is a comma-separated list of 5 doubles [attributes,attribute distribution,connections,vertex neighbourhood, edge distribution]")
   val algorithm = parser.option[String](List("algorithm"), "[Spectral|Hierarchical]", "algorithm to perform clustering")
   val similarity = parser.option[String](List("similarity"), "[RCNT|RCNTv2|HS|RIBL|HSAG]", "similarity measure")
   val bag = parser.option[String](List("bagSimilarity"), "[chiSquared|maximum|minimum|union]", "bag similarity measure")
@@ -55,12 +55,39 @@ object LearnNewRepresentation {
     })
   }
 
+  def printParameters() = {
+    println("CLUSTERING WITH THE FOLLOWING PARAMETERS")
+    println(s"---- depth: ${depth.value.getOrElse(0)}")
+    println(s"---- parameter set: ${weights.value.getOrElse("0.2,0.2,0.2,0.2,0.2")}")
+    println(s"---- clustering algorithm: ${algorithm.value.getOrElse("Spectral")}")
+    println(s"---- similarity measure: ${similarity.value.getOrElse("RCNT")}")
+    println(s"---- bag similarity measure: ${bag.value.getOrElse("chiSquared")}")
+    println(s"---- bag combination method: ${bagCombination.value.getOrElse("intersection")}")
+    println(s"---- linkage (for Hierarchical clustering): ${linkage.value.getOrElse("average")}")
+    println(s"---- using local directory: ${useLocalRepository.value.getOrElse(false)}")
+    println(s"---- maximal number of clusters: ${maxNumberOfClusters.value.getOrElse(10)}")
+    println(s"---- saving everything with name: ${outputName.value.getOrElse("newLayer")}")
+    println("")
+    println(s"---- query: ${query.value.get}")
+    println(s"---- clustering selection method: ${selectionMethod.value.getOrElse("predefined")}")
+    println(s"---- clustering validation method: ${clusteringValidation.value.getOrElse("intraClusterSimilarity")}")
+    println(s"---- saturation selection trade-off factor: ${tradeOffFactor.value.getOrElse(0.9)}")
+    println(s"---- clustering edges: ${clusterEdges.value.getOrElse(false)}")
+    println(s"---- k: ${k.value.getOrElse(0)}")
+    println(s"---- k per domains: ${kPerDomain.value.getOrElse("")}")
+    println()
+    println()
+
+  }
+
   def main(args: Array[String]) {
     parser.parse(args)
     require(head.hasValue, "no header specified")
     require(dbs.hasValue, "no databases specified")
     require(query.hasValue, "query not specified")
     require(declarationFile.hasValue, "declarations of the predicates not provided")
+
+    printParameters()
 
     val predicateDeclarations = new PredicateDeclarations(declarationFile.value.get)
     val KnowledgeBase = new KnowledgeBase(dbs.value, Helper.readFile(head.value.get).mkString("\n"), predicateDeclarations)
@@ -96,23 +123,6 @@ object LearnNewRepresentation {
       case "intersection" => new IntersectionCombination()
     }
 
-    val similarityMeasure = similarity.value.getOrElse("RCNT") match {
-      case "RCNT" =>
-        new SimilarityNeighbourhoodTrees(KnowledgeBase,
-                                         depth.value.getOrElse(0),
-                                         weights.value.getOrElse("0.2,0.2,0.2,0.2,0.2").split(",").toList.map(_.toDouble),
-                                         bagComparison,
-                                         bagCombinationMethod,
-                                         useLocalRepository.value.getOrElse(false))
-      case "RCNTv2" =>
-        new SimilarityNTv2(KnowledgeBase,
-                           depth.value.getOrElse(0),
-                           weights.value.getOrElse("0.2,0.2,0.2,0.2,0.2").split(",").toList.map(_.toDouble),
-                           bagComparison,
-                           bagCombinationMethod,
-                           useLocalRepository.value.getOrElse(false))
-    }
-
     // clustering algorithm
     val clustering = algorithm.value.getOrElse("Spectral") match {
       case "Spectral" =>
@@ -133,74 +143,58 @@ object LearnNewRepresentation {
     val headerWriter = new BufferedWriter(new FileWriter(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.def"))
     val declarationsWriter = new BufferedWriter(new FileWriter(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.decl"))
 
+    val parameterSets = weights.value.getOrElse("0.2,0.2,0.2,0.2,0.2").split(";").toList.map( par => par.split(",").toList.map( _.toDouble ))
 
     try {
-      //CREATING NEW REPRESENTATION, PER EACH DOMAIN
-      domainsToCluster.zip(clusterPerDomain).foreach(domain => {
+      val onset = maxNumberOfClusters.value.getOrElse(10)
 
-        // build all clusterings
-        var createdClusters = List[Set[List[String]]]()
-        val filename = similarityMeasure.getObjectSimilaritySave(List(domain._1), rootFolder.value.getOrElse("./tmp"))
+      parameterSets.zipWithIndex.foreach( parSet => {
+        println(s"Clustering with the following weights ${parSet._1}")
 
-        (2 until maxNumberOfClusters.value.getOrElse(10)).foreach(numCl => {
-          createdClusters = createdClusters :+ clustering.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
-        })
-
-
-        // cluster selection method
-        val clusterSelector = selectionMethod.value.getOrElse("predefined") match {
-          case "predefined" => new PredefinedNumber(domain._2)
-          case "model" => new ModelBasedSelection(filename._1, filename._2.map(_._1), clusterValidationMethod)
-          case "saturation" => new IncreaseSaturationCut(filename._1, filename._2.map(_._1), clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
+        val similarityMeasure = similarity.value.getOrElse("RCNT") match {
+          case "RCNT" =>
+            new SimilarityNeighbourhoodTrees(KnowledgeBase,
+                                             depth.value.getOrElse(0),
+                                             parSet._1,
+                                             bagComparison,
+                                             bagCombinationMethod,
+                                             useLocalRepository.value.getOrElse(false))
+          case "RCNTv2" =>
+            new SimilarityNTv2(KnowledgeBase,
+                               depth.value.getOrElse(0),
+                               parSet._1,
+                               bagComparison,
+                               bagCombinationMethod,
+                               useLocalRepository.value.getOrElse(false))
         }
 
+        //CREATING NEW REPRESENTATION, PER EACH DOMAIN
+        domainsToCluster.zip(clusterPerDomain).foreach(domain => {
+          println(s"---- clustering domains ${domain._1}")
 
-        // select best clustering, and write to file
-        val selectedCluster = clusterSelector.selectFromClusters(createdClusters)
-        selectedCluster.zipWithIndex.foreach(clust => {
-          headerWriter.write(s"Cluster_${domain._1}${clust._2}(${domain._1})\n")
-          declarationsWriter.write(s"Cluster_${domain._1}${clust._2}(name)\n")
-          kbWriter.write(clust._1.map(elem => s"Cluster_${domain._1}${clust._2}($elem)").mkString("\n") + "\n")
-        })
-
-        // clear the cache for the next domain
-        similarityMeasure.clearCache()
-
-        // additional newline for easier reading
-        headerWriter.write(s"\n")
-        declarationsWriter.write(s"\n")
-        kbWriter.write("\n")
-
-        headerWriter.flush()
-        declarationsWriter.flush()
-        kbWriter.flush()
-
-      })
-
-
-      // CLUSTER LINKS BETWEEN THESE DOMAINS
-      if (clusterEdges.value.getOrElse(false) && domainsToCluster.length > 1) {
-
-        (domainsToCluster ++ domainsToCluster).sorted.combinations(2).filter(com => existsConnection(com, KnowledgeBase)).foreach(comb => {
+          // build all clusterings
           var createdClusters = List[Set[List[String]]]()
-          val filename = similarityMeasure.getHyperEdgeSimilaritySave(comb, rootFolder.value.getOrElse("./tmp"))
+          val filename = similarityMeasure.getObjectSimilaritySave(List(domain._1), rootFolder.value.getOrElse("./tmp"))
 
           (2 until maxNumberOfClusters.value.getOrElse(10)).foreach(numCl => {
             createdClusters = createdClusters :+ clustering.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
           })
 
+
           // cluster selection method
           val clusterSelector = selectionMethod.value.getOrElse("predefined") match {
-            case "predefined" => new PredefinedNumber(k.value.getOrElse(2))
-            case "model" => new ModelBasedSelection(filename._1, filename._2.map(_.mkString(":")), clusterValidationMethod)
-            case "saturation" => new IncreaseSaturationCut(filename._1, filename._2.map(_.mkString(":")), clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
+            case "predefined" => new PredefinedNumber(domain._2)
+            case "model" => new ModelBasedSelection(filename._1, filename._2.map(_._1), clusterValidationMethod)
+            case "saturation" => new IncreaseSaturationCut(filename._1, filename._2.map(_._1), clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
           }
 
+
+          // select best clustering, and write to file
           val selectedCluster = clusterSelector.selectFromClusters(createdClusters)
           selectedCluster.zipWithIndex.foreach(clust => {
-            headerWriter.write(s"Cluster_${comb.mkString("_")}${clust._2}(${comb.mkString(",")})\n")
-            declarationsWriter.write(s"Cluster_${comb.mkString("_")}${clust._2}(${comb.map(x => "name").mkString(",")})\n")
-            kbWriter.write(clust._1.map(elem => s"Cluster_${comb.mkString("_")}${clust._2}(${elem.replace(":",",")})").mkString("\n") + "\n")
+            headerWriter.write(s"Cluster_${domain._1}${clust._2 + (parSet._2 * onset)}(${domain._1})\n")
+            declarationsWriter.write(s"Cluster_${domain._1}${clust._2 + (parSet._2 * onset)}(name)\n")
+            kbWriter.write(clust._1.map(elem => s"Cluster_${domain._1}${clust._2 + (parSet._2 * onset)}($elem)").mkString("\n") + "\n")
           })
 
           // clear the cache for the next domain
@@ -216,7 +210,51 @@ object LearnNewRepresentation {
           kbWriter.flush()
 
         })
-      }
+
+
+        // CLUSTER LINKS BETWEEN THESE DOMAINS
+        if (clusterEdges.value.getOrElse(false) && domainsToCluster.length > 1) {
+
+          (domainsToCluster ++ domainsToCluster).sorted.combinations(2).filter(com => existsConnection(com, KnowledgeBase)).foreach(comb => {
+            println(s"---- clustering hyperedge $comb")
+
+            var createdClusters = List[Set[List[String]]]()
+            val filename = similarityMeasure.getHyperEdgeSimilaritySave(comb, rootFolder.value.getOrElse("./tmp"))
+
+            (2 until maxNumberOfClusters.value.getOrElse(10)).foreach(numCl => {
+              createdClusters = createdClusters :+ clustering.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
+            })
+
+            // cluster selection method
+            val clusterSelector = selectionMethod.value.getOrElse("predefined") match {
+              case "predefined" => new PredefinedNumber(k.value.getOrElse(2))
+              case "model" => new ModelBasedSelection(filename._1, filename._2.map(_.mkString(":")), clusterValidationMethod)
+              case "saturation" => new IncreaseSaturationCut(filename._1, filename._2.map(_.mkString(":")), clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
+            }
+
+            val selectedCluster = clusterSelector.selectFromClusters(createdClusters)
+            selectedCluster.zipWithIndex.foreach(clust => {
+              headerWriter.write(s"Cluster_${comb.mkString("_")}${clust._2 + (parSet._2 * onset)}(${comb.mkString(",")})\n")
+              declarationsWriter.write(s"Cluster_${comb.mkString("_")}${clust._2 + (parSet._2 * onset)}(${comb.map(x => "name").mkString(",")})\n")
+              kbWriter.write(clust._1.map(elem => s"Cluster_${comb.mkString("_")}${clust._2 + (parSet._2 * onset)}(${elem.replace(":",",")})").mkString("\n") + "\n")
+            })
+
+            // clear the cache for the next domain
+            similarityMeasure.clearCache()
+
+            // additional newline for easier reading
+            headerWriter.write(s"\n")
+            declarationsWriter.write(s"\n")
+            kbWriter.write("\n")
+
+            headerWriter.flush()
+            declarationsWriter.flush()
+            kbWriter.flush()
+
+          })
+        }
+
+      })
 
     }
     catch {
