@@ -19,6 +19,7 @@ class IncreaseSaturationCut(override protected val similarityMatrixFileName: Str
   override def selectFromClusters(clusterSet: List[Set[List[String]]]) = {
     val evals = clusterSet.map( cluster => evaluateSingle.validate(cluster, getElementOrder, getSimilarityMatrixFile)).zipWithIndex
     val cands = evals.dropRight(1).map( item => item._1 >= (factor * evals(item._2 + 1)._1)).indexOf(true)
+    println(s"---- ---- saturation selection::measures for clusters: ${evals.map(x => s"${x._1}:::${x._2 + 2}")}")
 
     cands == -1 match {
       case false => clusterSet(cands)
