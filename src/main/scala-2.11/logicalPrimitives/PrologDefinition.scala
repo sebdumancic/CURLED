@@ -6,15 +6,16 @@ package logicalPrimitives
   * @param stringRep prolog rule as string
   * Created by seb on 23.02.16.
   */
-abstract class PrologDefinition(protected val stringRep: String) {
+class PrologDefinition(protected val stringRep: String) {
 
   protected var absoluteCoverage: Int = 0
   protected var relativeCoverage: Double = 0.0
 
   protected var head: String = null
-  protected var body: List[String] = null
+  protected var body: List[String] = List[String]()
 
-  protected val predicateRegex = """(.*)\((.*)\)""".r
+  protected val predicateRegex = """(.*?)\((.*?)\).*""".r
+  parseString()
 
   /** Set the absolute coverage value
     *
@@ -56,10 +57,10 @@ abstract class PrologDefinition(protected val stringRep: String) {
 
   /** Parses the string*/
   protected def parseString() = {
-    val splitted = stringRep.split(":-")
+    val splitted = stringRep.split(":-").toList
     addHeadAndClean(splitted.head)
 
-    splitted(1).trim.split("),").filter( _.trim != "!.").map( _ + ")").foreach( bp => addBodyPred(bp))
+    splitted(1).trim.split("""\),""").toList.filter( _.trim != "!.").map( _ + ")").foreach( bp => addBodyPred(bp))
   }
 
   /** Returns the rule in Prolog format */
