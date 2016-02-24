@@ -2,6 +2,7 @@ package representationLearning
 
 import java.io.{BufferedWriter, FileWriter, PrintWriter}
 
+import learners.ilp.{TildeInduce, TildeNFold}
 import org.clapper.argot.ArgotParser
 import relationalClustering.bagComparison.bagCombination.{IntersectionCombination, UnionCombination}
 import relationalClustering.bagComparison.{ChiSquaredDistance, MaximumSimilarity, MinimumSimilarity, Unionsimilarity}
@@ -43,6 +44,12 @@ object LearnNewRepresentation {
   val k = parser.option[Int](List("k"), "n", "desired number of clusters in 'predefined' selection method is used")
   val kPerDomain = parser.option[String](List("kDomain"), "comma-separated list of domain:numClusters", "number of clusters per domain")
   val clusterEdges = parser.flag[Boolean](List("clusterHyperedges"), "should hyperedges be clusters as well (between the specified domains)")
+  val extractDefinitions = parser.flag[Boolean](List("extractDefs"), "extract the definitions of new predicates")
+  val defLearner = parser.option[String](List("definitionLearner"), "TildeInduce|TildeNFold", "which learner to use for definition extraction")
+  val tildeHeuristic = parser.option[String](List("tildeHeuristic"), "gain|gainratio", "heuristics to use with TILDE [default: gain]")
+  val tildeMinCases = parser.option[Int](List("tildeMinCases"), "n", "minimal number of cases [default: 4]")
+  val nFold = parser.option[Int](List("numFolds"), "n", "number of folds for N-fold validation [default: 10]")
+
 
   /** Checks whether a hyperEdge between specified domains exists in a knowledge base
     *
@@ -67,7 +74,7 @@ object LearnNewRepresentation {
     println(s"---- using local directory: ${useLocalRepository.value.getOrElse(false)}")
     println(s"---- maximal number of clusters: ${maxNumberOfClusters.value.getOrElse(10)}")
     println(s"---- saving everything with name: ${outputName.value.getOrElse("newLayer")}")
-    println("")
+    println()
     println(s"---- query: ${query.value.get}")
     println(s"---- clustering selection method: ${selectionMethod.value.getOrElse("predefined")}")
     println(s"---- clustering validation method: ${clusteringValidation.value.getOrElse("intraClusterSimilarity")}")
@@ -75,6 +82,20 @@ object LearnNewRepresentation {
     println(s"---- clustering edges: ${clusterEdges.value.getOrElse(false)}")
     println(s"---- k: ${k.value.getOrElse(0)}")
     println(s"---- k per domains: ${kPerDomain.value.getOrElse("")}")
+    println()
+    if (extractDefinitions.value.getOrElse(false)) {
+      println(s"---- learning definitions of new predicates: true")
+      println(s"---- extracting definitions with: ${defLearner.value.getOrElse("TildeInduce")}")
+      defLearner.value.getOrElse("TildeInduce") match {
+        case "TildeInduce" =>
+          println(s"---- tilde heuristics: ${tildeHeuristic.value.getOrElse("gain")}")
+          println(s"---- tilde minimal number of cases: ${tildeMinCases.value.getOrElse(4)}")
+        case "TildeNFold" =>
+          println(s"---- tilde heuristics: ${tildeHeuristic.value.getOrElse("gain")}")
+          println(s"---- tilde minimal number of cases: ${tildeMinCases.value.getOrElse(4)}")
+          println(s"---- number of folds: ${nFold.value.getOrElse(10)}")
+      }
+    }
     println()
     println()
 
@@ -255,6 +276,36 @@ object LearnNewRepresentation {
         }
 
       })
+
+
+      //extract definitions of discovered predicates
+      if (extractDefinitions.value.getOrElse(false)) {
+        val latentPredicateDeclarations = new PredicateDeclarations(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.decl")
+        val latentKB = new KnowledgeBase(Seq(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.db"),
+                                         Helper.readFile(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.def").mkString("\n"),
+                                         latentPredicateDeclarations)
+
+        println("\n\n\n FOUND PREDICATES")
+        latentKB.getPredicateNames.map(latentKB.getPredicate).foreach( pred => {
+
+          val learner = defLearner.value.getOrElse("TildeInduce") match {
+            case "TildeInduce" => new TildeInduce(rootFolder.value.getOrElse("./tmp"), KnowledgeBase, latentKB, pred.getName, pred.getRole == Settings.ROLE_HYPEREDGE,
+                                                  sys.env.getOrElse("ACE_ILP_ROOT", "/home/seba/Software/ACE-ilProlog-1.2.20/linux"), tildeHeuristic.value.getOrElse("gain"),
+                                                  tildeMinCases.value.getOrElse(4))
+            case "TildeNFold" => new TildeNFold(rootFolder.value.getOrElse("./tmp"), KnowledgeBase, latentKB, pred.getName, pred.getRole == Settings.ROLE_HYPEREDGE,
+                                                sys.env.getOrElse("ACE_ILP_ROOT", "/home/seba/Software/ACE-ilProlog-1.2.20/linux"), nFold.value.getOrElse(10),
+                                                tildeHeuristic.value.getOrElse("gain"), tildeMinCases.value.getOrElse(4))
+          }
+
+          learner.fitModel()
+
+          println("*"*10)
+          learner.getDefinitions.foreach(pd => println(s"    $pd"))
+          println("*"*10)
+
+        })
+      }
+
 
     }
     catch {
