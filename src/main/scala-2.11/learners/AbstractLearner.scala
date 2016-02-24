@@ -1,5 +1,7 @@
 package learners
 
+import logicalPrimitives.AbstractDefinition
+
 /**
   * Created by seb on 08.02.16.
   */
@@ -9,6 +11,6 @@ abstract class AbstractLearner {
   def fitModel(): Unit
 
   /** Extracts the definitions of new predicates */
-  def getDefinitions: Set[String]
+  def getDefinitions: Set[AbstractDefinition]
 
 }
