@@ -2,7 +2,7 @@ package learners
 
 import logicalPrimitives.AbstractDefinition
 
-/**
+/** Abstract learner aby learner should extend
   * Created by seb on 08.02.16.
   */
 abstract class AbstractLearner {
@@ -11,6 +11,6 @@ abstract class AbstractLearner {
   def fitModel(): Unit
 
   /** Extracts the definitions of new predicates */
-  def getDefinitions: Set[AbstractDefinition]
+  def getDefinitions: Set[ _ <: AbstractDefinition]
 
 }
