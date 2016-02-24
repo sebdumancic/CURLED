@@ -6,7 +6,7 @@ package logicalPrimitives
   * @param stringRep prolog rule as string
   * Created by seb on 23.02.16.
   */
-class PrologDefinition(protected val stringRep: String) {
+case class PrologDefinition(override protected val stringRep: String) extends AbstractDefinition(stringRep) {
 
   protected var absoluteCoverage: Int = 0
   protected var relativeCoverage: Double = 0.0
