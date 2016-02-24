@@ -213,7 +213,7 @@ object LearnNewRepresentation {
 
 
         // CLUSTER LINKS BETWEEN THESE DOMAINS
-        if (clusterEdges.value.getOrElse(false) && domainsToCluster.length > 1) {
+        if (clusterEdges.value.getOrElse(false)) {
 
           (domainsToCluster ++ domainsToCluster).sorted.combinations(2).filter(com => existsConnection(com, KnowledgeBase)).foreach(comb => {
             println(s"---- clustering hyperedge $comb")
