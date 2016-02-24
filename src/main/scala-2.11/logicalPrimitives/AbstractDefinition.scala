@@ -10,4 +10,17 @@ abstract class AbstractDefinition(protected val stringRep: String) {
   def asProlog: String
 
   def asMLN: String
+
+  override def toString = {
+    asMLN
+  }
+
+  override def hashCode = {
+    toString.hashCode
+  }
+
+  override def equals(that: Any) = that match {
+    case that: AbstractDefinition => this.toString == that.toString
+    case _ => false
+  }
 }
