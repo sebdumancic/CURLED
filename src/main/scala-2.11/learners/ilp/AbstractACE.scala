@@ -194,9 +194,16 @@ abstract class AbstractACE(protected val rootFolder: String,
     writeKBToFile()
     writeSettingsFile()
 
-    (Process(Seq("echo", runCommand), mainDir, "ACE_ILP_ROOT" -> getACERoot)
-      #| Process(Seq(s"$getACERoot/bin/ace"), mainDir, "ACE_ILP_ROOT" -> getACERoot)) ! ProcessLogger(line => println(s"TILDE says: $line"),
-                                                                                                                      line => println(s"TILDE ERROR: $line"))
+    val aceLog = new BufferedWriter(new FileWriter(s"${mainDir.getAbsolutePath}/ace.log"))
+
+    try {
+      (Process(Seq("echo", runCommand), mainDir, "ACE_ILP_ROOT" -> getACERoot)
+        #| Process(Seq(s"$getACERoot/bin/ace"), mainDir, "ACE_ILP_ROOT" -> getACERoot)) ! ProcessLogger(line => aceLog.write(s"TILDE says: $line"),
+                                                                                                        line => aceLog.write(s"TILDE ERROR: $line"))
+    }
+    finally {
+      aceLog.close()
+    }
   }
 
 
