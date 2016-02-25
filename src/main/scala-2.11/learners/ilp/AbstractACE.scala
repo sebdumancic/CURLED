@@ -34,6 +34,9 @@ abstract class AbstractACE(protected val rootFolder: String,
       |typed_language(yes).
     """.stripMargin
 
+  val mainDir = new File(s"$getRootFolder/$targetPredicate")
+  mainDir.mkdir()
+
   /** Returns the root folder */
   protected def getRootFolder = {
     val absPath = new File(rootFolder)
@@ -93,7 +96,7 @@ abstract class AbstractACE(protected val rootFolder: String,
 
   /** Writes the ACE common settings file*/
   protected def writeSettingsFile() = {
-    val writer = new BufferedWriter(new FileWriter(s"$getRootFolder/${getTargetPredicateName.toLowerCase}.s"))
+    val writer = new BufferedWriter(new FileWriter(s"${mainDir.getAbsolutePath}/${getTargetPredicateName.toLowerCase}.s"))
 
     try {
       writer.write(basicSettings + "\n")
@@ -109,7 +112,7 @@ abstract class AbstractACE(protected val rootFolder: String,
 
   /** Writes the knowledge base in a file */
   protected def writeKBToFile() = {
-    val writer = new BufferedWriter(new FileWriter(s"$getRootFolder/${getTargetPredicateName.toLowerCase}.kb"))
+    val writer = new BufferedWriter(new FileWriter(s"${mainDir.getAbsolutePath}/${getTargetPredicateName.toLowerCase}.kb"))
 
     try {
       //add all non-target predicates
@@ -139,7 +142,7 @@ abstract class AbstractACE(protected val rootFolder: String,
 
   /** Reads the rules in a prolog syntax*/
   protected def readRulesFromFile(filename: String) = {
-    val reader = Source.fromFile(s"$getRootFolder/$filename")
+    val reader = Source.fromFile(s"${mainDir.getAbsolutePath}/$filename")
     val definitions = collection.mutable.Set[PrologDefinition]()
     val coverageRegex = """% (\d{1,10}\.0)/\d{1,10}\.0=(\d.\d{1,15})""".r
 
@@ -191,8 +194,8 @@ abstract class AbstractACE(protected val rootFolder: String,
     writeKBToFile()
     writeSettingsFile()
 
-    (Process(Seq("echo", runCommand), new File(getRootFolder), "ACE_ILP_ROOT" -> getACERoot)
-      #| Process(Seq(s"$getACERoot/bin/ace"), new File(getRootFolder), "ACE_ILP_ROOT" -> getACERoot)) ! ProcessLogger(line => println(s"TILDE says: $line"),
+    (Process(Seq("echo", runCommand), mainDir, "ACE_ILP_ROOT" -> getACERoot)
+      #| Process(Seq(s"$getACERoot/bin/ace"), mainDir, "ACE_ILP_ROOT" -> getACERoot)) ! ProcessLogger(line => println(s"TILDE says: $line"),
                                                                                                                       line => println(s"TILDE ERROR: $line"))
   }
 
