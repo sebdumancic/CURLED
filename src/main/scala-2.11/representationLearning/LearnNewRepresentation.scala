@@ -305,8 +305,6 @@ object LearnNewRepresentation {
 
         })
       }
-
-
     }
     catch {
       case e: Exception => println(s"ERROR: ${e.getMessage}\n \t ${e.getStackTrace}")
