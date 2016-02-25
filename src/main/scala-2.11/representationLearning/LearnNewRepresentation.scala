@@ -300,7 +300,7 @@ object LearnNewRepresentation {
           learner.fitModel()
 
           println("*"*10)
-          learner.getDefinitions.foreach(pd => println(s"    $pd"))
+          learner.getDefinitions.foreach(pd => println(s"  ${pd.getAbsCoverage}(${pd.getRelCoverage}) ::  $pd"))
           println("*"*10)
 
         })
