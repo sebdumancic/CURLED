@@ -86,8 +86,8 @@ abstract class AbstractACE(protected val rootFolder: String,
 
     val attrs = getOriginalKB.getPredicateNames.filter( _ != getTargetPredicateName).map(getOriginalKB.getPredicate).filter( _.getRole == Settings.ROLE_ATTRIBUTE).map(pred => {
       val roles = pred.getArgumentRoles
-      s"rmode(${pred.getName.toLowerCase}(${pred.getDomains.zipWithIndex.map( x => if (roles(x._2) == Settings.ARG_TYPE_ATTRIBUTE) s"+-${x._1.capitalize}${x._2}" else s"-${x._1.capitalize}${x._2}").mkString(",")})).\n" +
-      s"rmode(${pred.getName.toLowerCase}(${pred.getDomainObjects.zipWithIndex.map( x => if (roles(x._2) == Settings.ARG_TYPE_ATTRIBUTE) s"#[${x._1.getElements.mkString(",")}]" else s"+-${x._1.getName.capitalize}${x._2}" )})).\n" +
+      s"rmode(${pred.getName.toLowerCase}(${pred.getDomains.zipWithIndex.map( x => if (roles(x._2) != Settings.ARG_TYPE_ATTRIBUTE) s"+-${x._1.capitalize}${x._2}" else s"-${x._1.capitalize}${x._2}").mkString(",")})).\n" +
+      s"rmode(${pred.getName.toLowerCase}(${pred.getDomainObjects.zipWithIndex.map( x => if (roles(x._2) == Settings.ARG_TYPE_ATTRIBUTE) s"#[${x._1.getElements.map(_.toLowerCase).mkString(",")}]" else s"+-${x._1.getName.capitalize}${x._2}" )})).\n" +
       s"type(${pred.getName.toLowerCase}(${pred.getDomains.map(_.toLowerCase).mkString(",")}))."
     }).mkString("\n")
 
