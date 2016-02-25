@@ -89,10 +89,10 @@ object LearnNewRepresentation {
       defLearner.value.getOrElse("TildeInduce") match {
         case "TildeInduce" =>
           println(s"---- tilde heuristics: ${tildeHeuristic.value.getOrElse("gain")}")
-          println(s"---- tilde minimal number of cases: ${tildeMinCases.value.getOrElse(4)}")
+          println(s"---- tilde minimal number of cases: ${tildeMinCases.value.getOrElse(2)}")
         case "TildeNFold" =>
           println(s"---- tilde heuristics: ${tildeHeuristic.value.getOrElse("gain")}")
-          println(s"---- tilde minimal number of cases: ${tildeMinCases.value.getOrElse(4)}")
+          println(s"---- tilde minimal number of cases: ${tildeMinCases.value.getOrElse(2)}")
           println(s"---- number of folds: ${nFold.value.getOrElse(10)}")
       }
     }
@@ -291,10 +291,10 @@ object LearnNewRepresentation {
           val learner = defLearner.value.getOrElse("TildeInduce") match {
             case "TildeInduce" => new TildeInduce(rootFolder.value.getOrElse("./tmp"), KnowledgeBase, latentKB, pred.getName, pred.getRole == Settings.ROLE_HYPEREDGE,
                                                   sys.env.getOrElse("ACE_ILP_ROOT", "/home/seba/Software/ACE-ilProlog-1.2.20/linux"), tildeHeuristic.value.getOrElse("gain"),
-                                                  tildeMinCases.value.getOrElse(4))
+                                                  tildeMinCases.value.getOrElse(2))
             case "TildeNFold" => new TildeNFold(rootFolder.value.getOrElse("./tmp"), KnowledgeBase, latentKB, pred.getName, pred.getRole == Settings.ROLE_HYPEREDGE,
                                                 sys.env.getOrElse("ACE_ILP_ROOT", "/home/seba/Software/ACE-ilProlog-1.2.20/linux"), nFold.value.getOrElse(10),
-                                                tildeHeuristic.value.getOrElse("gain"), tildeMinCases.value.getOrElse(4))
+                                                tildeHeuristic.value.getOrElse("gain"), tildeMinCases.value.getOrElse(2))
           }
 
           learner.fitModel()
