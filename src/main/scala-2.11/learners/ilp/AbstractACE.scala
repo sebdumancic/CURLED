@@ -99,7 +99,7 @@ abstract class AbstractACE(protected val rootFolder: String,
     val writer = new BufferedWriter(new FileWriter(s"${mainDir.getAbsolutePath}/${getTargetPredicateName.toLowerCase}.s"))
 
     try {
-      writer.write(basicSettings + "\n")
+      writer.write(basicSettings)
       writer.write(getAdditionalSettings + "\n")
       writer.write(s"predict(${getTargetPredicateName.toLowerCase}(${getTargetPredicate.getDomains.map( x => "+").mkString(",")},-)).\n\n")
       writer.write(getTypes + "\n")
