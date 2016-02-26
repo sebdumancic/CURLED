@@ -11,6 +11,7 @@ import relationalClustering.clustering.{Hierarchical, Spectral}
 import relationalClustering.representation.KnowledgeBase
 import relationalClustering.similarity.{SimilarityNTv2, SimilarityNeighbourhoodTrees}
 import relationalClustering.utils.{Helper, PredicateDeclarations, Settings}
+import representationLearning.clusterComparison.OverlapWithARI
 import representationLearning.clusterSelection.{IncreaseSaturationCut, ModelBasedSelection, PredefinedNumber}
 
 /**
@@ -49,6 +50,7 @@ object LearnNewRepresentation {
   val tildeHeuristic = parser.option[String](List("tildeHeuristic"), "gain|gainratio", "heuristics to use with TILDE [default: gain]")
   val tildeMinCases = parser.option[Int](List("tildeMinCases"), "n", "minimal number of cases [default: 4]")
   val nFold = parser.option[Int](List("numFolds"), "n", "number of folds for N-fold validation [default: 10]")
+  val overlapThreshold = parser.option[Double](List("overlapThreshold"), "Double [0.3]", "if overlap measure smaller than this threshold, a cluster is accepted as a new predicate")
 
 
   /** Checks whether a hyperEdge between specified domains exists in a knowledge base
@@ -169,12 +171,16 @@ object LearnNewRepresentation {
     try {
       val onset = maxNumberOfClusters.value.getOrElse(10)
 
+      val clusterOverlapMeasure = new OverlapWithARI(rootFolder.value.getOrElse("./tmp"))
+
         //CREATING NEW REPRESENTATION, PER EACH DOMAIN
         domainsToCluster.zip(clusterPerDomain).foreach(domain => {
-          println(s"---- clustering domains ${domain._1}")
+          println(s"Clustering domains ${domain._1}")
+
+          val allCreatedClusters = collection.mutable.Set[Set[List[String]]]()
 
           parameterSets.zipWithIndex.foreach(params => {
-            println(s"Clustering with the following parameters ${params._1}")
+            println(s"---- Clustering with the following parameters ${params._1}")
 
             val similarityMeasure = similarity.value.getOrElse("RCNT") match {
               case "RCNT" =>
@@ -212,24 +218,58 @@ object LearnNewRepresentation {
 
             // select best clustering, and write to file
             val selectedCluster = clusterSelector.selectFromClusters(createdClusters)
-            selectedCluster.zipWithIndex.foreach(clust => {
+
+            allCreatedClusters.nonEmpty match {
+              case true =>
+                val maxOverlap = allCreatedClusters.map(cl => clusterOverlapMeasure.compare(cl, selectedCluster)).max
+                if (maxOverlap < overlapThreshold.value.getOrElse(0.3)) {
+                  allCreatedClusters += selectedCluster
+                  println(s"---- ---- ---- Cluster accepted ($maxOverlap)")
+                }
+                else {
+                  println(s"---- ---- ---- Cluster rejected because $maxOverlap: $params, $domain")
+                }
+              case false =>
+                allCreatedClusters += selectedCluster
+            }
+
+            //allCreatedClusters += selectedCluster
+            /*selectedCluster.zipWithIndex.foreach(clust => {
               headerWriter.write(s"Cluster_${domain._1}${clust._2 + (params._2 * onset)}(${domain._1})\n")
               declarationsWriter.write(s"Cluster_${domain._1}${clust._2 + (params._2 * onset)}(name)\n")
               kbWriter.write(clust._1.map(elem => s"Cluster_${domain._1}${clust._2 + (params._2 * onset)}($elem)").mkString("\n") + "\n")
-            })
+            })*/
 
             // clear the cache for the next domain
             similarityMeasure.clearCache()
 
             // additional newline for easier reading
-            headerWriter.write(s"\n")
+            /*headerWriter.write(s"\n")
             declarationsWriter.write(s"\n")
             kbWriter.write("\n")
 
             headerWriter.flush()
             declarationsWriter.flush()
-            kbWriter.flush()
+            kbWriter.flush()*/
           })
+
+          allCreatedClusters.zipWithIndex.foreach(clustering => {
+            clustering._1.zipWithIndex.foreach(clust => {
+              headerWriter.write(s"Cluster_${domain._1}${clust._2 + (clustering._2 * onset)}(${domain._1})\n")
+              declarationsWriter.write(s"Cluster_${domain._1}${clust._2 + (clustering._2 * onset)}(name)\n")
+              kbWriter.write(clust._1.map(elem => s"Cluster_${domain._1}${clust._2 + (clustering._2 * onset)}($elem)").mkString("\n") + "\n")
+            })
+
+            headerWriter.write(s"\n")
+            declarationsWriter.write(s"\n")
+            kbWriter.write("\n")
+          })
+
+          headerWriter.flush()
+          declarationsWriter.flush()
+          kbWriter.flush()
+
+          allCreatedClusters.clear()
         })
 
 
@@ -237,10 +277,10 @@ object LearnNewRepresentation {
         if (clusterEdges.value.getOrElse(false)) {
 
           (domainsToCluster ++ domainsToCluster).sorted.combinations(2).filter(com => existsConnection(com, KnowledgeBase)).foreach(comb => {
-            println(s"---- clustering hyperedge $comb")
+            println(s"Clustering hyperedge $comb")
 
             parameterSets.zipWithIndex.foreach(params => {
-              println(s"Clustering with the following parameters ${params._1}")
+              println(s"---- Clustering with the following parameters ${params._1}")
 
               val similarityMeasure = similarity.value.getOrElse("RCNT") match {
                 case "RCNT" =>
