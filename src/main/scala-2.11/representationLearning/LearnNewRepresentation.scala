@@ -169,95 +169,53 @@ object LearnNewRepresentation {
     try {
       val onset = maxNumberOfClusters.value.getOrElse(10)
 
-      parameterSets.zipWithIndex.foreach( parSet => {
-        println(s"Clustering with the following weights ${parSet._1}")
-
-        val similarityMeasure = similarity.value.getOrElse("RCNT") match {
-          case "RCNT" =>
-            new SimilarityNeighbourhoodTrees(KnowledgeBase,
-                                             depth.value.getOrElse(0),
-                                             parSet._1,
-                                             bagComparison,
-                                             bagCombinationMethod,
-                                             useLocalRepository.value.getOrElse(false))
-          case "RCNTv2" =>
-            new SimilarityNTv2(KnowledgeBase,
-                               depth.value.getOrElse(0),
-                               parSet._1,
-                               bagComparison,
-                               bagCombinationMethod,
-                               useLocalRepository.value.getOrElse(false))
-        }
-
         //CREATING NEW REPRESENTATION, PER EACH DOMAIN
         domainsToCluster.zip(clusterPerDomain).foreach(domain => {
           println(s"---- clustering domains ${domain._1}")
 
-          // build all clusterings
-          var createdClusters = List[Set[List[String]]]()
-          val filename = similarityMeasure.getObjectSimilaritySave(List(domain._1), rootFolder.value.getOrElse("./tmp"))
+          parameterSets.zipWithIndex.foreach(params => {
+            println(s"Clustering with the following parameters ${params._1}")
 
-          (2 until maxNumberOfClusters.value.getOrElse(10)).foreach(numCl => {
-            createdClusters = createdClusters :+ clustering.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
-          })
+            val similarityMeasure = similarity.value.getOrElse("RCNT") match {
+              case "RCNT" =>
+                new SimilarityNeighbourhoodTrees(KnowledgeBase,
+                  depth.value.getOrElse(0),
+                  params._1,
+                  bagComparison,
+                  bagCombinationMethod,
+                  useLocalRepository.value.getOrElse(false))
+              case "RCNTv2" =>
+                new SimilarityNTv2(KnowledgeBase,
+                  depth.value.getOrElse(0),
+                  params._1,
+                  bagComparison,
+                  bagCombinationMethod,
+                  useLocalRepository.value.getOrElse(false))
+            }
 
-
-          // cluster selection method
-          val clusterSelector = selectionMethod.value.getOrElse("predefined") match {
-            case "predefined" => new PredefinedNumber(domain._2)
-            case "model" => new ModelBasedSelection(filename._1, filename._2.map(_._1), clusterValidationMethod)
-            case "saturation" => new IncreaseSaturationCut(filename._1, filename._2.map(_._1), clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
-          }
-
-
-          // select best clustering, and write to file
-          val selectedCluster = clusterSelector.selectFromClusters(createdClusters)
-          selectedCluster.zipWithIndex.foreach(clust => {
-            headerWriter.write(s"Cluster_${domain._1}${clust._2 + (parSet._2 * onset)}(${domain._1})\n")
-            declarationsWriter.write(s"Cluster_${domain._1}${clust._2 + (parSet._2 * onset)}(name)\n")
-            kbWriter.write(clust._1.map(elem => s"Cluster_${domain._1}${clust._2 + (parSet._2 * onset)}($elem)").mkString("\n") + "\n")
-          })
-
-          // clear the cache for the next domain
-          similarityMeasure.clearCache()
-
-          // additional newline for easier reading
-          headerWriter.write(s"\n")
-          declarationsWriter.write(s"\n")
-          kbWriter.write("\n")
-
-          headerWriter.flush()
-          declarationsWriter.flush()
-          kbWriter.flush()
-
-        })
-
-
-        // CLUSTER LINKS BETWEEN THESE DOMAINS
-        if (clusterEdges.value.getOrElse(false)) {
-
-          (domainsToCluster ++ domainsToCluster).sorted.combinations(2).filter(com => existsConnection(com, KnowledgeBase)).foreach(comb => {
-            println(s"---- clustering hyperedge $comb")
-
+            // build all clusterings
             var createdClusters = List[Set[List[String]]]()
-            val filename = similarityMeasure.getHyperEdgeSimilaritySave(comb, rootFolder.value.getOrElse("./tmp"))
+            val filename = similarityMeasure.getObjectSimilaritySave(List(domain._1), rootFolder.value.getOrElse("./tmp"))
 
             (2 until maxNumberOfClusters.value.getOrElse(10)).foreach(numCl => {
               createdClusters = createdClusters :+ clustering.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
             })
 
+
             // cluster selection method
             val clusterSelector = selectionMethod.value.getOrElse("predefined") match {
-              case "predefined" => new PredefinedNumber(k.value.getOrElse(2))
-              case "model" => new ModelBasedSelection(filename._1, filename._2.map(_.mkString(":")), clusterValidationMethod)
-              case "saturation" => new IncreaseSaturationCut(filename._1, filename._2.map(_.mkString(":")), clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
+              case "predefined" => new PredefinedNumber(domain._2)
+              case "model" => new ModelBasedSelection(filename._1, filename._2.map(_._1), clusterValidationMethod)
+              case "saturation" => new IncreaseSaturationCut(filename._1, filename._2.map(_._1), clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
             }
 
+
+            // select best clustering, and write to file
             val selectedCluster = clusterSelector.selectFromClusters(createdClusters)
             selectedCluster.zipWithIndex.foreach(clust => {
-              headerWriter.write(s"Cluster_${comb.mkString("_")}${clust._2 + (parSet._2 * onset)}(${comb.mkString(",")})\n")
-              declarationsWriter.write(s"Cluster_${comb.mkString("_")}${clust._2 + (parSet._2 * onset)}(${comb.map(x => "name").mkString(",")})\n")
-              kbWriter.write(clust._1.map(elem => s"Cluster_${comb.mkString("_")}${clust._2 + (parSet._2 * onset)}(${elem.replace(":",",")})").mkString("\n") + "\n")
+              headerWriter.write(s"Cluster_${domain._1}${clust._2 + (params._2 * onset)}(${domain._1})\n")
+              declarationsWriter.write(s"Cluster_${domain._1}${clust._2 + (params._2 * onset)}(name)\n")
+              kbWriter.write(clust._1.map(elem => s"Cluster_${domain._1}${clust._2 + (params._2 * onset)}($elem)").mkString("\n") + "\n")
             })
 
             // clear the cache for the next domain
@@ -271,11 +229,72 @@ object LearnNewRepresentation {
             headerWriter.flush()
             declarationsWriter.flush()
             kbWriter.flush()
+          })
+        })
 
+
+        // CLUSTER LINKS BETWEEN THESE DOMAINS
+        if (clusterEdges.value.getOrElse(false)) {
+
+          (domainsToCluster ++ domainsToCluster).sorted.combinations(2).filter(com => existsConnection(com, KnowledgeBase)).foreach(comb => {
+            println(s"---- clustering hyperedge $comb")
+
+            parameterSets.zipWithIndex.foreach(params => {
+              println(s"Clustering with the following parameters ${params._1}")
+
+              val similarityMeasure = similarity.value.getOrElse("RCNT") match {
+                case "RCNT" =>
+                  new SimilarityNeighbourhoodTrees(KnowledgeBase,
+                    depth.value.getOrElse(0),
+                    params._1,
+                    bagComparison,
+                    bagCombinationMethod,
+                    useLocalRepository.value.getOrElse(false))
+                case "RCNTv2" =>
+                  new SimilarityNTv2(KnowledgeBase,
+                    depth.value.getOrElse(0),
+                    params._1,
+                    bagComparison,
+                    bagCombinationMethod,
+                    useLocalRepository.value.getOrElse(false))
+              }
+
+              var createdClusters = List[Set[List[String]]]()
+              val filename = similarityMeasure.getHyperEdgeSimilaritySave(comb, rootFolder.value.getOrElse("./tmp"))
+
+              (2 until maxNumberOfClusters.value.getOrElse(10)).foreach(numCl => {
+                createdClusters = createdClusters :+ clustering.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
+              })
+
+              // cluster selection method
+              val clusterSelector = selectionMethod.value.getOrElse("predefined") match {
+                case "predefined" => new PredefinedNumber(k.value.getOrElse(2))
+                case "model" => new ModelBasedSelection(filename._1, filename._2.map(_.mkString(":")), clusterValidationMethod)
+                case "saturation" => new IncreaseSaturationCut(filename._1, filename._2.map(_.mkString(":")), clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
+              }
+
+              val selectedCluster = clusterSelector.selectFromClusters(createdClusters)
+              selectedCluster.zipWithIndex.foreach(clust => {
+                headerWriter.write(s"Cluster_${comb.mkString("_")}${clust._2 + (params._2 * onset)}(${comb.mkString(",")})\n")
+                declarationsWriter.write(s"Cluster_${comb.mkString("_")}${clust._2 + (params._2 * onset)}(${comb.map(x => "name").mkString(",")})\n")
+                kbWriter.write(clust._1.map(elem => s"Cluster_${comb.mkString("_")}${clust._2 + (params._2 * onset)}(${elem.replace(":", ",")})").mkString("\n") + "\n")
+              })
+
+              // clear the cache for the next domain
+              similarityMeasure.clearCache()
+
+              // additional newline for easier reading
+              headerWriter.write(s"\n")
+              declarationsWriter.write(s"\n")
+              kbWriter.write("\n")
+
+              headerWriter.flush()
+              declarationsWriter.flush()
+              kbWriter.flush()
+            })
           })
         }
 
-      })
 
 
       //extract definitions of discovered predicates
