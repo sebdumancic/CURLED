@@ -279,6 +279,8 @@ object LearnNewRepresentation {
           (domainsToCluster ++ domainsToCluster).sorted.combinations(2).filter(com => existsConnection(com, KnowledgeBase)).foreach(comb => {
             println(s"Clustering hyperedge $comb")
 
+            val allCreatedClusters = collection.mutable.Set[Set[List[String]]]()
+
             parameterSets.zipWithIndex.foreach(params => {
               println(s"---- Clustering with the following parameters ${params._1}")
 
@@ -314,24 +316,57 @@ object LearnNewRepresentation {
               }
 
               val selectedCluster = clusterSelector.selectFromClusters(createdClusters)
-              selectedCluster.zipWithIndex.foreach(clust => {
+
+              allCreatedClusters.nonEmpty match {
+                case true =>
+                  val maxOverlap = allCreatedClusters.map(cl => clusterOverlapMeasure.compare(cl, selectedCluster)).max
+                  if (maxOverlap < overlapThreshold.value.getOrElse(0.3)) {
+                    allCreatedClusters += selectedCluster
+                    println(s"---- ---- ---- Cluster accepted ($maxOverlap)")
+                  }
+                  else {
+                    println(s"---- ---- ---- Cluster rejected because $maxOverlap: $params, $comb")
+                  }
+                case false =>
+                  allCreatedClusters += selectedCluster
+              }
+
+              /*selectedCluster.zipWithIndex.foreach(clust => {
                 headerWriter.write(s"Cluster_${comb.mkString("_")}${clust._2 + (params._2 * onset)}(${comb.mkString(",")})\n")
                 declarationsWriter.write(s"Cluster_${comb.mkString("_")}${clust._2 + (params._2 * onset)}(${comb.map(x => "name").mkString(",")})\n")
                 kbWriter.write(clust._1.map(elem => s"Cluster_${comb.mkString("_")}${clust._2 + (params._2 * onset)}(${elem.replace(":", ",")})").mkString("\n") + "\n")
-              })
+              })*/
 
               // clear the cache for the next domain
               similarityMeasure.clearCache()
 
               // additional newline for easier reading
-              headerWriter.write(s"\n")
+              /*headerWriter.write(s"\n")
               declarationsWriter.write(s"\n")
               kbWriter.write("\n")
 
               headerWriter.flush()
               declarationsWriter.flush()
-              kbWriter.flush()
+              kbWriter.flush()*/
             })
+
+            allCreatedClusters.zipWithIndex.foreach(clustering => {
+              clustering._1.zipWithIndex.foreach(clust => {
+                headerWriter.write(s"Cluster_${comb.mkString("_")}${clust._2 + (clustering._2 * onset)}(${comb.mkString(",")})\n")
+                declarationsWriter.write(s"Cluster_${comb.mkString("_")}${clust._2 + (clustering._2 * onset)}(${comb.map(x => "name").mkString(",")})\n")
+                kbWriter.write(clust._1.map(elem => s"Cluster_${comb.mkString("_")}${clust._2 + (clustering._2 * onset)}(${elem.replace(":", ",")})").mkString("\n") + "\n")
+              })
+
+              headerWriter.write(s"\n")
+              declarationsWriter.write(s"\n")
+              kbWriter.write("\n")
+            })
+
+            headerWriter.flush()
+            declarationsWriter.flush()
+            kbWriter.flush()
+
+            allCreatedClusters.clear()
           })
         }
 
