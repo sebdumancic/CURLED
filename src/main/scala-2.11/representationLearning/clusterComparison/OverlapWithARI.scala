@@ -1,6 +1,6 @@
 package representationLearning.clusterComparison
 
-import java.io.{BufferedWriter, FileWriter}
+import java.io.{BufferedWriter, File, FileWriter}
 
 import relationalClustering.clustering.evaluation.{AdjustedRandIndex, LabelsContainer}
 
@@ -26,7 +26,9 @@ class OverlapWithARI(protected val rootFolder: String) extends AbstractClusterOv
     val fakeLabels = new LabelsContainer(s"$getRoot/tmp_labels.db")
     val ari = new AdjustedRandIndex(getRoot)
 
-    ari.validate(cluster2, fakeLabels)
+    val res = ari.validate(cluster2, fakeLabels)
+    cleanArtifacts()
+    res
   }
 
   /** Saves clusters in labels format where the label is cluster ID */
@@ -42,5 +44,16 @@ class OverlapWithARI(protected val rootFolder: String) extends AbstractClusterOv
       writer.close()
     }
 
+  }
+
+  /** cleans the artifacts produced */
+  protected def cleanArtifacts() = {
+    val tmpLabels = new File(s"$getRoot/tmp_labels.db")
+    val groundTruth = new File(s"$getRoot/ari_ground_truth.txt")
+    val script = new File(s"$getRoot/ari_script.py")
+
+    tmpLabels.delete()
+    groundTruth.delete()
+    script.delete()
   }
 }
