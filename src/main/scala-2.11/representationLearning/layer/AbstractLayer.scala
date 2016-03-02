@@ -52,6 +52,20 @@ abstract class AbstractLayer(protected val rootFolder: String,
     kbFile
   }
 
+  /** Closes the files */
+  protected def closeFiles() = {
+    getDeclFile.close()
+    getHeaderFile.close()
+    getKBFile.close()
+  }
+
+  /** Closes the current */
+  protected def flushFiles() = {
+    getDeclFile.flush()
+    getHeaderFile.flush()
+    getKBFile.flush()
+  }
+
   /** Method to build the layer
     *
     * @return (header file name, kb file name, declarations filename)
