@@ -32,6 +32,21 @@ abstract class AbstractLayer(protected val rootFolder: String,
     declarationsFile
   }
 
+  /** Returns the path to the definition file */
+  def getHeaderName = {
+    s"$getRoot/$getOutputName.def"
+  }
+
+  /** Return the path to the declarations file */
+  def getDeclarationsName = {
+    s"$getRoot/$getOutputName.decl"
+  }
+
+  /** Returns the path to the knowledge base file */
+  def getKBName = {
+    s"$getRoot/$getOutputName.kb"
+  }
+
   /** Returns the knowledge base file [[BufferedWriter]] */
   protected def getKBFile = {
     kbFile
