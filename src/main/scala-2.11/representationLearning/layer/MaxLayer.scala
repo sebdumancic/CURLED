@@ -25,8 +25,9 @@ class MaxLayer(override protected val rootFolder: String,
                override protected val overlapThreshold: Double,
                override protected val maxClusters: Int,
                override protected val parameterList: List[List[Double]],
-               override protected val clusterHyperedges: Boolean) extends AdaptiveSelectionLayer(rootFolder, outputName, knowledgeBase, domainsToCluster, depth, bagCompare, bagCombination,
+               override protected val clusterHyperedges: Boolean,
+               override protected val asFeature: Boolean) extends AdaptiveSelectionLayer(rootFolder, outputName, knowledgeBase, domainsToCluster, depth, bagCompare, bagCombination,
                                                                                                  measureIdentifier, clusteringAlg, new ModelBasedSelection(clusterEval), clusterOverlap,
-                                                                                                 overlapThreshold, maxClusters, parameterList, clusterHyperedges) {
+                                                                                                 overlapThreshold, maxClusters, parameterList, clusterHyperedges, asFeature) {
 
 }
