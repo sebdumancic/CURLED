@@ -211,13 +211,13 @@ object LearnNewRepresentation {
             // cluster selection method
             val clusterSelector = selectionMethod.value.getOrElse("predefined") match {
               case "predefined" => new PredefinedNumber(domain._2)
-              case "model" => new ModelBasedSelection(filename._1, filename._2.map(_._1), clusterValidationMethod)
-              case "saturation" => new IncreaseSaturationCut(filename._1, filename._2.map(_._1), clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
+              case "model" => new ModelBasedSelection(clusterValidationMethod)
+              case "saturation" => new IncreaseSaturationCut(clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
             }
 
 
             // select best clustering, and write to file
-            val selectedCluster = clusterSelector.selectFromClusters(createdClusters)
+            val selectedCluster = clusterSelector.selectFromClusters(createdClusters, filename._2.map(_._1), filename._1)
 
             allCreatedClusters.nonEmpty match {
               case true =>
@@ -311,11 +311,11 @@ object LearnNewRepresentation {
               // cluster selection method
               val clusterSelector = selectionMethod.value.getOrElse("predefined") match {
                 case "predefined" => new PredefinedNumber(k.value.getOrElse(2))
-                case "model" => new ModelBasedSelection(filename._1, filename._2.map(_.mkString(":")), clusterValidationMethod)
-                case "saturation" => new IncreaseSaturationCut(filename._1, filename._2.map(_.mkString(":")), clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
+                case "model" => new ModelBasedSelection(clusterValidationMethod)
+                case "saturation" => new IncreaseSaturationCut(clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
               }
 
-              val selectedCluster = clusterSelector.selectFromClusters(createdClusters)
+              val selectedCluster = clusterSelector.selectFromClusters(createdClusters, filename._2.map(_.mkString(":")), filename._1)
 
               allCreatedClusters.nonEmpty match {
                 case true =>
