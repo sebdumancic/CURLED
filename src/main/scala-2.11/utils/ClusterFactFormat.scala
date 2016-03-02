@@ -6,7 +6,7 @@ package utils
 object ClusterFactFormat {
 
   def asFeature(domains: List[String], clusteringId: Int, clusterId: Int, elem: String) = {
-    s"Cluster_${domains.mkString("_")}$clusteringId(${elem.replace(":", ",")}, cluster_${domains.mkString("_")}$clusterId)"
+    s"Cluster_${domains.mkString("_")}$clusteringId(${elem.replace(":", ",")},cluster_${domains.mkString("_")}$clusterId)"
   }
 
   def asAnnotation(domains: List[String], clusteringId: Int, clusterId: Int, onset: Int, elem: String) = {
@@ -14,7 +14,7 @@ object ClusterFactFormat {
   }
 
   def definitionAsFeature(domains: List[String], clusteringId: Int) = {
-    s"Cluster_${domains.mkString("_")}$clusteringId(${domains.mkString(",")}, type${domains.mkString("_")}$clusteringId)"
+    s"Cluster_${domains.mkString("_")}$clusteringId(${domains.mkString(",")},type${domains.mkString("_")}$clusteringId)"
   }
 
   def definitionAsAnnotation(domains: List[String], clusteringId: Int, clusterId: Int, onset: Int) = {
@@ -22,7 +22,7 @@ object ClusterFactFormat {
   }
 
   def declarationsAsFeature(domains: List[String], clusteringId: Int) = {
-    s"Cluster_${domains.mkString("_")}$clusteringId(${domains.map( x => "name").mkString(",")}, attribute)"
+    s"Cluster_${domains.mkString("_")}$clusteringId(${domains.map( x => "name").mkString(",")},attribute)"
   }
 
   def declarationAsAnnotation(domains: List[String], clusteringId: Int, clusterId: Int, onset: Int) = {
