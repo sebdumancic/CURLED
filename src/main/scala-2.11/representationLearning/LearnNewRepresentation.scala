@@ -51,18 +51,8 @@ object LearnNewRepresentation {
   val tildeMinCases = parser.option[Int](List("tildeMinCases"), "n", "minimal number of cases [default: 4]")
   val nFold = parser.option[Int](List("numFolds"), "n", "number of folds for N-fold validation [default: 10]")
   val overlapThreshold = parser.option[Double](List("overlapThreshold"), "Double [0.3]", "if overlap measure smaller than this threshold, a cluster is accepted as a new predicate")
+  val featureFormat = parser.flag[Boolean](List("asFeature"), "should feature representation be used to store new representation")
 
-
-  /** Checks whether a hyperEdge between specified domains exists in a knowledge base
-    *
-    * @param doms list of domains in a hyperEdge
-    * @return [[Boolean]]
-    * */
-  def existsConnection(doms: List[String], knowledgeBase: KnowledgeBase) = {
-    knowledgeBase.getPredicateNames.map(knowledgeBase.getPredicate).filter( _.getRole == Settings.ROLE_HYPEREDGE).foldLeft(false)( (acc, pred) => {
-      acc || pred.getDomains.sorted.combinations(doms.length).map(_.toList).contains(doms)
-    })
-  }
 
   def printParameters() = {
     println("CLUSTERING WITH THE FOLLOWING PARAMETERS")
@@ -186,7 +176,8 @@ object LearnNewRepresentation {
                                                 overlapThreshold.value.getOrElse(0.3),
                                                 maxNumberOfClusters.value.getOrElse(10),
                                                 parameterSets,
-                                                clusterEdges.value.getOrElse(false)
+                                                clusterEdges.value.getOrElse(false),
+                                                featureFormat.value.getOrElse(false)
     )
 
 

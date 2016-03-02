@@ -25,9 +25,10 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
                              protected val clusterSelect: AbstractClusterSelection,
                              protected val clusterOverlap: AbstractClusterOverlap,
                              protected val overlapThreshold: Double,
-                             protected val maxClusters: Int,
+                             override protected val maxClusters: Int,
                              protected val parameterList: List[List[Double]],
-                             protected val clusterHyperedges: Boolean) extends AbstractLayer(rootFolder, outputName) {
+                             protected val clusterHyperedges: Boolean,
+                             override protected val asFeature: Boolean) extends AbstractLayer(rootFolder, outputName, maxClusters, asFeature) {
 
   /** Checks whether a hyperEdge between specified domains exists in a knowledge base
     *
@@ -131,29 +132,6 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
     })
 
     allCreatedClusters.toSet
-  }
-
-  /** Writes the provided clusterings in a file
-    *
-    * @param clusters a set of clusterings (set of lists)
-    * @param domains  domains of the clusterings
-    **/
-  protected def writeFiles(clusters: Set[Set[List[String]]], domains: List[String]) = {
-    clusters.zipWithIndex.foreach(clustering => {
-      clustering._1.zipWithIndex.foreach(clust => {
-        getHeaderFile.write(s"Cluster_${domains.mkString("_")}${clust._2 + (clustering._2 * maxClusters)}(${domains.mkString(",")})\n")
-        getDeclFile.write(s"Cluster_${domains.mkString("_")}${clust._2 + (clustering._2 * maxClusters)}(${domains.map(x => "name").mkString(",")})\n")
-        getKBFile.write(clust._1.map(elem => s"Cluster_${domains.mkString("_")}${clust._2 + (clustering._2 * maxClusters)}(${elem.replace(":", ",")})").mkString("\n") + "\n")
-      })
-
-      getHeaderFile.write("\n")
-      getDeclFile.write("\n")
-      getKBFile.write("\n")
-    })
-
-    getHeaderFile.flush()
-    getDeclFile.flush()
-    getKBFile.flush()
   }
 
   /** Build a layer by clustering each specified domain and the existing hyperedges is specified
