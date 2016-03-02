@@ -3,6 +3,7 @@ package representationLearning.clusterSelection
 import relationalClustering.clustering.evaluation.AbstractEvaluatorModel
 
 /**
+  * Implement model based selection - applies the evaluation method to each clustering, and returns the one with the highest score
   * Created by seb on 10.02.16.
   */
 class ModelBasedSelection(protected val evaluateSingle: AbstractEvaluatorModel) extends AbstractClusterSelection {
