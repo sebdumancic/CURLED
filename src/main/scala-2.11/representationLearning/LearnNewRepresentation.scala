@@ -11,7 +11,7 @@ import relationalClustering.clustering.{Hierarchical, Spectral}
 import relationalClustering.representation.KnowledgeBase
 import relationalClustering.utils.{Helper, PredicateDeclarations, Settings}
 import representationLearning.clusterComparison.OverlapWithARI
-import representationLearning.clusterSelection.{IncreaseSaturationCut, ModelBasedSelection}
+import representationLearning.clusterSelection.{IncreaseSaturationCut, ModelBasedSelection, PredefinedNumber}
 import representationLearning.layer.AdaptiveSelectionLayer
 
 /**
@@ -162,6 +162,7 @@ object LearnNewRepresentation {
     }
 
     val clusterSelector = selectionMethod.value.getOrElse("predefined") match {
+      case "predefined" => new PredefinedNumber(clusterPerDomain.head)
       case "model" => new ModelBasedSelection(clusterValidationMethod)
       case "saturation" => new IncreaseSaturationCut(clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
     }
@@ -172,20 +173,20 @@ object LearnNewRepresentation {
     val parameterSets = weights.value.getOrElse("0.2,0.2,0.2,0.2,0.2").split(":").toList.map( par => par.split(",").toList.map( _.toDouble ))
 
     val firstLayer = new AdaptiveSelectionLayer(rootFolder.value.getOrElse("./tmp"),
-      outputName.value.getOrElse("newLayer"),
-      KnowledgeBase,
-      domainsToCluster,
-      depth.value.getOrElse(0),
-      bagComparison,
-      bagCombinationMethod,
-      similarity.value.getOrElse("RCNT"),
-      clustering,
-      clusterSelector,
-      clusterOverlap,
-      overlapThreshold.value.getOrElse(0.3),
-      maxNumberOfClusters.value.getOrElse(10),
-      parameterSets,
-      clusterEdges.value.getOrElse(false)
+                                                outputName.value.getOrElse("newLayer"),
+                                                KnowledgeBase,
+                                                domainsToCluster,
+                                                depth.value.getOrElse(0),
+                                                bagComparison,
+                                                bagCombinationMethod,
+                                                similarity.value.getOrElse("RCNT"),
+                                                clustering,
+                                                clusterSelector,
+                                                clusterOverlap,
+                                                overlapThreshold.value.getOrElse(0.3),
+                                                maxNumberOfClusters.value.getOrElse(10),
+                                                parameterSets,
+                                                clusterEdges.value.getOrElse(false)
     )
 
 
