@@ -1,6 +1,6 @@
 package representationLearning
 
-import java.io.{BufferedWriter, FileWriter, PrintWriter}
+import java.io.{File, PrintWriter}
 
 import learners.ilp.{TildeInduce, TildeNFold}
 import org.clapper.argot.ArgotParser
@@ -9,10 +9,10 @@ import relationalClustering.bagComparison.{ChiSquaredDistance, MaximumSimilarity
 import relationalClustering.clustering.evaluation.{AverageIntraClusterSimilarity, SilhouetteScore}
 import relationalClustering.clustering.{Hierarchical, Spectral}
 import relationalClustering.representation.KnowledgeBase
-import relationalClustering.similarity.{SimilarityNTv2, SimilarityNeighbourhoodTrees}
 import relationalClustering.utils.{Helper, PredicateDeclarations, Settings}
 import representationLearning.clusterComparison.OverlapWithARI
-import representationLearning.clusterSelection.{IncreaseSaturationCut, ModelBasedSelection, PredefinedNumber}
+import representationLearning.clusterSelection.{IncreaseSaturationCut, ModelBasedSelection}
+import representationLearning.layer.AdaptiveSelectionLayer
 
 /**
   * CLI implementing the functionality of learning new representation with
@@ -161,222 +161,48 @@ object LearnNewRepresentation {
       case "intraClusterSimilarity" => new AverageIntraClusterSimilarity()
     }
 
+    val clusterSelector = selectionMethod.value.getOrElse("predefined") match {
+      case "model" => new ModelBasedSelection(clusterValidationMethod)
+      case "saturation" => new IncreaseSaturationCut(clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
+    }
 
-    val kbWriter = new BufferedWriter(new FileWriter(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.db"))
-    val headerWriter = new BufferedWriter(new FileWriter(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.def"))
-    val declarationsWriter = new BufferedWriter(new FileWriter(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.decl"))
+
+    val clusterOverlap = new OverlapWithARI(rootFolder.value.getOrElse("./tmp"))
 
     val parameterSets = weights.value.getOrElse("0.2,0.2,0.2,0.2,0.2").split(":").toList.map( par => par.split(",").toList.map( _.toDouble ))
 
+    val firstLayer = new AdaptiveSelectionLayer(rootFolder.value.getOrElse("./tmp"),
+      outputName.value.getOrElse("newLayer"),
+      KnowledgeBase,
+      domainsToCluster,
+      depth.value.getOrElse(0),
+      bagComparison,
+      bagCombinationMethod,
+      similarity.value.getOrElse("RCNT"),
+      clustering,
+      clusterSelector,
+      clusterOverlap,
+      overlapThreshold.value.getOrElse(0.3),
+      maxNumberOfClusters.value.getOrElse(10),
+      parameterSets,
+      clusterEdges.value.getOrElse(false)
+    )
+
+
     try {
-      val onset = maxNumberOfClusters.value.getOrElse(10)
 
-      val clusterOverlapMeasure = new OverlapWithARI(rootFolder.value.getOrElse("./tmp"))
+      val (headerH, declH, kbH) = firstLayer.build()
 
-        //CREATING NEW REPRESENTATION, PER EACH DOMAIN
-        domainsToCluster.zip(clusterPerDomain).foreach(domain => {
-          println(s"Clustering domains ${domain._1}")
-
-          val allCreatedClusters = collection.mutable.Set[Set[List[String]]]()
-
-          parameterSets.zipWithIndex.foreach(params => {
-            println(s"---- Clustering with the following parameters ${params._1}")
-
-            val similarityMeasure = similarity.value.getOrElse("RCNT") match {
-              case "RCNT" =>
-                new SimilarityNeighbourhoodTrees(KnowledgeBase,
-                  depth.value.getOrElse(0),
-                  params._1,
-                  bagComparison,
-                  bagCombinationMethod,
-                  useLocalRepository.value.getOrElse(false))
-              case "RCNTv2" =>
-                new SimilarityNTv2(KnowledgeBase,
-                  depth.value.getOrElse(0),
-                  params._1,
-                  bagComparison,
-                  bagCombinationMethod,
-                  useLocalRepository.value.getOrElse(false))
-            }
-
-            // build all clusterings
-            var createdClusters = List[Set[List[String]]]()
-            val filename = similarityMeasure.getObjectSimilaritySave(List(domain._1), rootFolder.value.getOrElse("./tmp"))
-
-            (2 until maxNumberOfClusters.value.getOrElse(10)).foreach(numCl => {
-              createdClusters = createdClusters :+ clustering.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
-            })
-
-
-            // cluster selection method
-            val clusterSelector = selectionMethod.value.getOrElse("predefined") match {
-              case "predefined" => new PredefinedNumber(domain._2)
-              case "model" => new ModelBasedSelection(clusterValidationMethod)
-              case "saturation" => new IncreaseSaturationCut(clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
-            }
-
-
-            // select best clustering, and write to file
-            val selectedCluster = clusterSelector.selectFromClusters(createdClusters, filename._2.map(_._1), filename._1)
-
-            allCreatedClusters.nonEmpty match {
-              case true =>
-                val maxOverlap = allCreatedClusters.map(cl => clusterOverlapMeasure.compare(cl, selectedCluster)).max
-                if (maxOverlap < overlapThreshold.value.getOrElse(0.3)) {
-                  allCreatedClusters += selectedCluster
-                  println(s"---- ---- ---- Cluster accepted ($maxOverlap)")
-                }
-                else {
-                  println(s"---- ---- ---- Cluster rejected because $maxOverlap: $params, $domain")
-                }
-              case false =>
-                allCreatedClusters += selectedCluster
-            }
-
-            //allCreatedClusters += selectedCluster
-            /*selectedCluster.zipWithIndex.foreach(clust => {
-              headerWriter.write(s"Cluster_${domain._1}${clust._2 + (params._2 * onset)}(${domain._1})\n")
-              declarationsWriter.write(s"Cluster_${domain._1}${clust._2 + (params._2 * onset)}(name)\n")
-              kbWriter.write(clust._1.map(elem => s"Cluster_${domain._1}${clust._2 + (params._2 * onset)}($elem)").mkString("\n") + "\n")
-            })*/
-
-            // clear the cache for the next domain
-            similarityMeasure.clearCache()
-
-            // additional newline for easier reading
-            /*headerWriter.write(s"\n")
-            declarationsWriter.write(s"\n")
-            kbWriter.write("\n")
-
-            headerWriter.flush()
-            declarationsWriter.flush()
-            kbWriter.flush()*/
-          })
-
-          allCreatedClusters.zipWithIndex.foreach(clustering => {
-            clustering._1.zipWithIndex.foreach(clust => {
-              headerWriter.write(s"Cluster_${domain._1}${clust._2 + (clustering._2 * onset)}(${domain._1})\n")
-              declarationsWriter.write(s"Cluster_${domain._1}${clust._2 + (clustering._2 * onset)}(name)\n")
-              kbWriter.write(clust._1.map(elem => s"Cluster_${domain._1}${clust._2 + (clustering._2 * onset)}($elem)").mkString("\n") + "\n")
-            })
-
-            headerWriter.write(s"\n")
-            declarationsWriter.write(s"\n")
-            kbWriter.write("\n")
-          })
-
-          headerWriter.flush()
-          declarationsWriter.flush()
-          kbWriter.flush()
-
-          allCreatedClusters.clear()
-        })
-
-
-        // CLUSTER LINKS BETWEEN THESE DOMAINS
-        if (clusterEdges.value.getOrElse(false)) {
-
-          (domainsToCluster ++ domainsToCluster).sorted.combinations(2).filter(com => existsConnection(com, KnowledgeBase)).foreach(comb => {
-            println(s"Clustering hyperedge $comb")
-
-            val allCreatedClusters = collection.mutable.Set[Set[List[String]]]()
-
-            parameterSets.zipWithIndex.foreach(params => {
-              println(s"---- Clustering with the following parameters ${params._1}")
-
-              val similarityMeasure = similarity.value.getOrElse("RCNT") match {
-                case "RCNT" =>
-                  new SimilarityNeighbourhoodTrees(KnowledgeBase,
-                    depth.value.getOrElse(0),
-                    params._1,
-                    bagComparison,
-                    bagCombinationMethod,
-                    useLocalRepository.value.getOrElse(false))
-                case "RCNTv2" =>
-                  new SimilarityNTv2(KnowledgeBase,
-                    depth.value.getOrElse(0),
-                    params._1,
-                    bagComparison,
-                    bagCombinationMethod,
-                    useLocalRepository.value.getOrElse(false))
-              }
-
-              var createdClusters = List[Set[List[String]]]()
-              val filename = similarityMeasure.getHyperEdgeSimilaritySave(comb, rootFolder.value.getOrElse("./tmp"))
-
-              (2 until maxNumberOfClusters.value.getOrElse(10)).foreach(numCl => {
-                createdClusters = createdClusters :+ clustering.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
-              })
-
-              // cluster selection method
-              val clusterSelector = selectionMethod.value.getOrElse("predefined") match {
-                case "predefined" => new PredefinedNumber(k.value.getOrElse(2))
-                case "model" => new ModelBasedSelection(clusterValidationMethod)
-                case "saturation" => new IncreaseSaturationCut(clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
-              }
-
-              val selectedCluster = clusterSelector.selectFromClusters(createdClusters, filename._2.map(_.mkString(":")), filename._1)
-
-              allCreatedClusters.nonEmpty match {
-                case true =>
-                  val maxOverlap = allCreatedClusters.map(cl => clusterOverlapMeasure.compare(cl, selectedCluster)).max
-                  if (maxOverlap < overlapThreshold.value.getOrElse(0.3)) {
-                    allCreatedClusters += selectedCluster
-                    println(s"---- ---- ---- Cluster accepted ($maxOverlap)")
-                  }
-                  else {
-                    println(s"---- ---- ---- Cluster rejected because $maxOverlap: $params, $comb")
-                  }
-                case false =>
-                  allCreatedClusters += selectedCluster
-              }
-
-              /*selectedCluster.zipWithIndex.foreach(clust => {
-                headerWriter.write(s"Cluster_${comb.mkString("_")}${clust._2 + (params._2 * onset)}(${comb.mkString(",")})\n")
-                declarationsWriter.write(s"Cluster_${comb.mkString("_")}${clust._2 + (params._2 * onset)}(${comb.map(x => "name").mkString(",")})\n")
-                kbWriter.write(clust._1.map(elem => s"Cluster_${comb.mkString("_")}${clust._2 + (params._2 * onset)}(${elem.replace(":", ",")})").mkString("\n") + "\n")
-              })*/
-
-              // clear the cache for the next domain
-              similarityMeasure.clearCache()
-
-              // additional newline for easier reading
-              /*headerWriter.write(s"\n")
-              declarationsWriter.write(s"\n")
-              kbWriter.write("\n")
-
-              headerWriter.flush()
-              declarationsWriter.flush()
-              kbWriter.flush()*/
-            })
-
-            allCreatedClusters.zipWithIndex.foreach(clustering => {
-              clustering._1.zipWithIndex.foreach(clust => {
-                headerWriter.write(s"Cluster_${comb.mkString("_")}${clust._2 + (clustering._2 * onset)}(${comb.mkString(",")})\n")
-                declarationsWriter.write(s"Cluster_${comb.mkString("_")}${clust._2 + (clustering._2 * onset)}(${comb.map(x => "name").mkString(",")})\n")
-                kbWriter.write(clust._1.map(elem => s"Cluster_${comb.mkString("_")}${clust._2 + (clustering._2 * onset)}(${elem.replace(":", ",")})").mkString("\n") + "\n")
-              })
-
-              headerWriter.write(s"\n")
-              declarationsWriter.write(s"\n")
-              kbWriter.write("\n")
-            })
-
-            headerWriter.flush()
-            declarationsWriter.flush()
-            kbWriter.flush()
-
-            allCreatedClusters.clear()
-          })
-        }
-
+      val newHeaderFile = new File(headerH)
+      val newDeclarationFile = new File(declH)
+      val newKBFile = new File(kbH)
 
 
       //extract definitions of discovered predicates
       if (extractDefinitions.value.getOrElse(false)) {
-        val latentPredicateDeclarations = new PredicateDeclarations(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.decl")
-        val latentKB = new KnowledgeBase(Seq(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.db"),
-                                         Helper.readFile(s"${rootFolder.value.getOrElse("./tmp")}/${outputName.value.getOrElse("newLayer")}.def").mkString("\n"),
+        val latentPredicateDeclarations = new PredicateDeclarations(newDeclarationFile.getAbsolutePath)
+        val latentKB = new KnowledgeBase(Seq(newKBFile.getAbsolutePath),
+          Helper.readFile(newHeaderFile.getAbsolutePath).mkString("\n"),
                                          latentPredicateDeclarations)
 
         println("\n\n\n FOUND PREDICATES")
@@ -405,11 +231,6 @@ object LearnNewRepresentation {
         val writeError = new PrintWriter(s"${rootFolder.value.getOrElse("./tmp")}/error.log")
         e.printStackTrace(writeError)
         writeError.close()
-    }
-    finally {
-      kbWriter.close()
-      headerWriter.close()
-      declarationsWriter.close()
     }
   }
 }
