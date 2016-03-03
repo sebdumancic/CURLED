@@ -6,7 +6,7 @@ package utils
 object ClusterFactFormat {
 
   def asFeature(domains: List[String], clusteringId: Int, clusterId: Int, elem: String) = {
-    s"Cluster_${domains.mkString("_")}$clusteringId(${elem.replace(":", ",")},cluster_${domains.mkString("_")}$clusterId)"
+    s"Cluster_${domains.mkString("_")}$clusteringId(${elem.replace(":", ",")},Cluster${clusteringId}_${domains.mkString("_")}$clusterId)"
   }
 
   def asAnnotation(domains: List[String], clusteringId: Int, clusterId: Int, onset: Int, elem: String) = {
