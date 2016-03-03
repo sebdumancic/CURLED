@@ -108,22 +108,22 @@ abstract class AbstractLayer(protected val rootFolder: String,
 
       if (asFeature) {
         // if cluster identity if a feature, the clustering needs to have only on definition/declaration
-        getHeaderFile.write(s"${formatSingleDefinition(domains, clustering._2, 0)}\n")
-        getDeclFile.write(s"${formatSingleDeclaration(domains, clustering._2, 0)}\n")
+        getHeaderFile.write(s"${formatSingleDefinition(domains, clustering._2, 0)}${sys.props("line.separator")}")
+        getDeclFile.write(s"${formatSingleDeclaration(domains, clustering._2, 0)}${sys.props("line.separator")}")
       }
 
       clustering._1.zipWithIndex.foreach(clust => {
         if (!asFeature) {
           // if target format is not feature-format, each cluster needs its own definition
-          getHeaderFile.write(s"${formatSingleDefinition(domains, clustering._2, clust._2)}\n")   //s"Cluster_${domains.mkString("_")}${clust._2 + (clustering._2 * maxClusters)}(${domains.mkString(",")})\n")
-          getDeclFile.write(s"${formatSingleDeclaration(domains, clustering._2, clust._2)}\n") //s"Cluster_${domains.mkString("_")}${clust._2 + (clustering._2 * maxClusters)}(${domains.map(x => "name").mkString(",")})\n")
+          getHeaderFile.write(s"${formatSingleDefinition(domains, clustering._2, clust._2)}${sys.props("line.separator")}")   //s"Cluster_${domains.mkString("_")}${clust._2 + (clustering._2 * maxClusters)}(${domains.mkString(",")})\n")
+          getDeclFile.write(s"${formatSingleDeclaration(domains, clustering._2, clust._2)}${sys.props("line.separator")}") //s"Cluster_${domains.mkString("_")}${clust._2 + (clustering._2 * maxClusters)}(${domains.map(x => "name").mkString(",")})\n")
         }
-        getKBFile.write(clust._1.map(elem => formatSingleFact(domains, clustering._2, clust._2, elem)).mkString("\n") + "\n") //s"Cluster_${domains.mkString("_")}${clust._2 + (clustering._2 * maxClusters)}(${elem.replace(":", ",")})"
+        getKBFile.write(clust._1.map(elem => formatSingleFact(domains, clustering._2, clust._2, elem)).mkString(s"${sys.props("line.separator")}") + s"${sys.props("line.separator")}") //s"Cluster_${domains.mkString("_")}${clust._2 + (clustering._2 * maxClusters)}(${elem.replace(":", ",")})"
       })
 
-      getHeaderFile.write("\n")
-      getDeclFile.write("\n")
-      getKBFile.write("\n")
+      getHeaderFile.write(s"${sys.props("line.separator")}")
+      getDeclFile.write(s"${sys.props("line.separator")}")
+      getKBFile.write(s"${sys.props("line.separator")}")
     })
 
     getHeaderFile.flush()
