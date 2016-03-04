@@ -27,7 +27,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
                              protected val overlapThreshold: Double,
                              override protected val maxClusters: Int,
                              protected val parameterList: List[List[Double]],
-                             protected val clusterHyperedges: Boolean,
+                             protected val doClusterHyperedges: Boolean,
                              override protected val asFeature: Boolean) extends AbstractLayer(rootFolder, outputName, maxClusters, asFeature) {
 
   /** Checks whether a hyperEdge between specified domains exists in a knowledge base
@@ -145,7 +145,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
       writeFiles(res, List(dom))
     })
 
-    if (clusterHyperedges) {
+    if (doClusterHyperedges) {
       (domainsToCluster ++ domainsToCluster).sorted.combinations(2).filter(com => existsConnection(com)).foreach(comb => {
         val res = clusterHyperedges(comb)
         writeFiles(res, comb)
