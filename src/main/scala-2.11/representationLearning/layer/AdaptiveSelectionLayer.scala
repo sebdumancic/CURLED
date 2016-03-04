@@ -122,7 +122,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
             println(s"---- ---- ---- Cluster accepted ($maxOverlap)")
           }
           else {
-            println(s"---- ---- ---- Cluster rejected because $maxOverlap: $pars, $doms")
+            println(s"---- ---- ---- Cluster rejected because $maxOverlap: ${pars._1}, $doms")
           }
         case false =>
           allCreatedClusters += selectedCluster
