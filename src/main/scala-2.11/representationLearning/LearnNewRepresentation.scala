@@ -162,26 +162,25 @@ object LearnNewRepresentation {
 
     val parameterSets = weights.value.getOrElse("0.2,0.2,0.2,0.2,0.2").split(":").toList.map( par => par.split(",").toList.map( _.toDouble ))
 
-    val firstLayer = new AdaptiveSelectionLayer(rootFolder.value.getOrElse("./tmp"),
-                                                outputName.value.getOrElse("newLayer"),
-                                                KnowledgeBase,
-                                                domainsToCluster,
-                                                depth.value.getOrElse(0),
-                                                bagComparison,
-                                                bagCombinationMethod,
-                                                similarity.value.getOrElse("RCNT"),
-                                                clustering,
-                                                clusterSelector,
-                                                clusterOverlap,
-                                                overlapThreshold.value.getOrElse(0.3),
-                                                maxNumberOfClusters.value.getOrElse(10),
-                                                parameterSets,
-                                                clusterEdges.value.getOrElse(false),
-                                                featureFormat.value.getOrElse(false)
-    )
-
-
     try {
+
+      val firstLayer = new AdaptiveSelectionLayer(rootFolder.value.getOrElse("./tmp"),
+                                                  outputName.value.getOrElse("newLayer"),
+                                                  KnowledgeBase,
+                                                  domainsToCluster,
+                                                  depth.value.getOrElse(0),
+                                                  bagComparison,
+                                                  bagCombinationMethod,
+                                                  similarity.value.getOrElse("RCNT"),
+                                                  clustering,
+                                                  clusterSelector,
+                                                  clusterOverlap,
+                                                  overlapThreshold.value.getOrElse(0.3),
+                                                  maxNumberOfClusters.value.getOrElse(10),
+                                                  parameterSets,
+                                                  clusterEdges.value.getOrElse(false),
+                                                  featureFormat.value.getOrElse(false)
+      )
 
       val (headerH, declH, kbH) = firstLayer.build()
 
