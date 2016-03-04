@@ -62,7 +62,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
 
       val filename = similarityMeasure.getObjectSimilaritySave(List(dom), getRoot)
 
-      (2 until maxClusters).foreach(numCl => {
+      (2 to maxClusters).foreach(numCl => {
         createdClusters = createdClusters :+ clusteringAlg.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
       })
 
@@ -108,7 +108,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
       var createdClusters = List[Set[List[String]]]()
       val filename = similarityMeasure.getHyperEdgeSimilaritySave(doms, getRoot)
 
-      (2 until maxClusters).foreach(numCl => {
+      (2 to maxClusters).foreach(numCl => {
         createdClusters = createdClusters :+ clusteringAlg.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
       })
 
