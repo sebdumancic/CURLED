@@ -4,7 +4,7 @@ import java.io.{BufferedWriter, File, FileWriter}
 
 import learners.AbstractLearner
 import logicalPrimitives.PrologDefinition
-import relationalClustering.representation.KnowledgeBase
+import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.utils.Settings
 import utils.RepresentationLearningSettings
 
