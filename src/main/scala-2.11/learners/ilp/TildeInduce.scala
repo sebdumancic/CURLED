@@ -1,6 +1,6 @@
 package learners.ilp
 
-import relationalClustering.representation.KnowledgeBase
+import relationalClustering.representation.domain.KnowledgeBase
 
 /**
   * Created by seb on 17.02.16.
