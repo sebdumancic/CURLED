@@ -5,10 +5,10 @@ import java.io.{File, PrintWriter}
 import learners.ilp.{TildeInduce, TildeNFold}
 import org.clapper.argot.ArgotParser
 import relationalClustering.bagComparison.bagCombination.{IntersectionCombination, UnionCombination}
-import relationalClustering.bagComparison.{ChiSquaredDistance, MaximumSimilarity, MinimumSimilarity, Unionsimilarity}
+import relationalClustering.bagComparison.{ChiSquaredDistance, MaximumSimilarity, MinimumSimilarity, UnionBagSimilarity}
 import relationalClustering.clustering.evaluation.{AverageIntraClusterSimilarity, SilhouetteScore}
 import relationalClustering.clustering.{Hierarchical, Spectral}
-import relationalClustering.representation.KnowledgeBase
+import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.utils.{Helper, PredicateDeclarations, Settings}
 import representationLearning.clusterComparison.OverlapWithARI
 import representationLearning.clusterSelection.{IncreaseSaturationCut, ModelBasedSelection, PredefinedNumber}
@@ -128,7 +128,7 @@ object LearnNewRepresentation {
       case "chiSquared" => new ChiSquaredDistance()
       case "minimum" => new MinimumSimilarity()
       case "maximum" => new MaximumSimilarity()
-      case "union" => new Unionsimilarity()
+      case "union" => new UnionBagSimilarity() //new Unionsimilarity()
     }
 
     val bagCombinationMethod = bagCombination.value.getOrElse("intersection") match {

@@ -3,7 +3,7 @@ package representationLearning.layer
 import relationalClustering.bagComparison.AbstractBagComparison
 import relationalClustering.bagComparison.bagCombination.AbstractBagCombine
 import relationalClustering.clustering.AbstractSKLearnCluster
-import relationalClustering.representation.KnowledgeBase
+import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.similarity.{SimilarityNTv2, SimilarityNeighbourhoodTrees}
 import relationalClustering.utils.Settings
 import representationLearning.clusterComparison.AbstractClusterOverlap
