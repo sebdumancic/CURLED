@@ -21,13 +21,24 @@ class IncreaseSaturationCut(protected val evaluateSingle: AbstractEvaluatorModel
     * */
   override def selectFromClusters(clusterSet: List[Set[List[String]]], elementOrdering: List[String], similarityMatrixFileName: String) = {
 
-    val evals = clusterSet.map(cluster => evaluateSingle.validate(cluster, elementOrdering, similarityMatrixFileName)).zipWithIndex
+    /*val evals = clusterSet.map(cluster => evaluateSingle.validate(cluster, elementOrdering, similarityMatrixFileName)).zipWithIndex
     val cands = evals.dropRight(1).map( item => item._1 >= (factor * evals(item._2 + 1)._1)).indexOf(true)
-    println(s"---- ---- saturation selection::measures for clusters: ${evals.map(x => s"${x._1}:::${x._2 + 2}")}")
+    println(s"---- ---- saturation selection::measures for clusters: ${evals.map(x => s"${x._1}:::${x._2 + 2}")}")*/
 
-    cands == -1 match {
+    val evaluated = clusterSet.map( cl => (cl, evaluateSingle.validate(cl, elementOrdering, similarityMatrixFileName))).sortBy(_._2)
+    val tmpSat = evaluated.map(_._2).zipWithIndex.dropRight(1).map(item => item._1 >= (factor * evaluated(item._2 + 1)._2))
+    val saturated = tmpSat.lastIndexOf(false) + 1
+    println(s"---- ---- saturation selection measure: ${evaluated.map(x => s"${x._2}:::${x._1.size}")};\n " +
+            s"---- ---- selected $saturated with number of clusters ${evaluated(saturated)._1.size}")
+
+    /*cands == -1 match {
       case false => clusterSet(cands)
       case true => clusterSet.maxBy(cluster => evaluateSingle.validate(cluster, elementOrdering, similarityMatrixFileName))
+    }*/
+
+    saturated == -1 match {
+      case false => evaluated(saturated)._1
+      case true => evaluated.maxBy(_._2)._1
     }
   }
 
