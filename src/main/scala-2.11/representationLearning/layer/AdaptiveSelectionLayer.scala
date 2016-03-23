@@ -68,7 +68,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
 
       val selectedCluster = clusterSelect.selectFromClusters(createdClusters, filename._2.map(_._1), filename._1)
 
-      allCreatedClusters.nonEmpty match {
+      allCreatedClusters.nonEmpty && selectedCluster.size > 1 match {
         case true =>
           val maxOverlap = allCreatedClusters.map(cl => clusterOverlap.compare(cl, selectedCluster)).max
           if (maxOverlap < overlapThreshold) {
@@ -79,7 +79,9 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
             println(s"---- ---- ---- Cluster rejected because $maxOverlap: $pars, $dom")
           }
         case false =>
-          allCreatedClusters += selectedCluster
+          if (selectedCluster.size > 1) {
+            allCreatedClusters += selectedCluster
+          }
       }
 
       similarityMeasure.clearCache()
