@@ -9,9 +9,14 @@ import relationalClustering.clustering.evaluation.AbstractEvaluatorModel
 class ModelBasedSelection(protected val evaluateSingle: AbstractEvaluatorModel) extends AbstractClusterSelection {
 
   def selectFromClusters(clusterSet: List[Set[List[String]]], elementOrdering: List[String], similarityMatrixFileName: String) = {
-    val evals = clusterSet.map(cluster => new Tuple2(cluster, evaluateSingle.validate(cluster, elementOrdering, similarityMatrixFileName)))
+    val evals = clusterSet.filter( x => x.size > 1).map(cluster => new Tuple2(cluster, evaluateSingle.validate(cluster, elementOrdering, similarityMatrixFileName)))
     println(s"---- ---- ----- ModelBasedSelection::select from clusters evaluations: ${evals.map(_._2)}")
 
-    evals.maxBy(_._2)._1
+    if (evals.isEmpty) {
+      clusterSet.head
+    }
+    else {
+      evals.maxBy(_._2)._1
+    }
   }
 }
