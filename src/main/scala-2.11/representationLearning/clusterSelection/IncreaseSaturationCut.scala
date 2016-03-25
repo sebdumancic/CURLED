@@ -33,8 +33,9 @@ class IncreaseSaturationCut(protected val evaluateSingle: AbstractEvaluatorModel
       case false => improvSaturation.indexOf(true)
       case true => improvSaturation.indexOf(true, math.max(improvSaturation.indexOf(false), 0))
     }
-    println(s"---- ---- relative improvement: ${relImprov.zip(improvSaturation)} \n" +
-            s"---- ---- selected $saturated with number of clusters ${evaluated(saturated)._1.size}")
+    println(s"---- ---- cluster quality: ${evaluated.map(cl => (cl._1.size, cl._2))}\n" +
+            s"---- ---- relative improvement: ${relImprov.zip(improvSaturation)} \n" +
+            s"---- ---- selected $saturated ")
 
     /*cands == -1 match {
       case false => clusterSet(cands)
