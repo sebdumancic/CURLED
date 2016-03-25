@@ -27,8 +27,13 @@ class IncreaseSaturationCut(protected val evaluateSingle: AbstractEvaluatorModel
 
     val evaluated = clusterSet.map( cl => (cl, evaluateSingle.validate(cl, elementOrdering, similarityMatrixFileName))).sortBy(_._2)
     val tmpSat = evaluated.map(_._2).zipWithIndex.dropRight(1).map(item => item._1 >= (factor * evaluated(item._2 + 1)._2))
-    val saturated = tmpSat.lastIndexOf(false) + 1
-    println(s"---- ---- saturation selection measure: ${evaluated.map(x => s"${x._2}:::${x._1.size}")};\n " +
+    val relImprov = evaluated.map(_._2).zipWithIndex.dropRight(1).map( item => evaluated(item._2 +1)._2/item._1)
+    val improvSaturation = relImprov.dropRight(1).zipWithIndex.map( item => (factor * item._1) <= relImprov(item._2 + 1))
+    val saturated = improvSaturation.indexOf(true) < improvSaturation.indexOf(false) match {
+      case false => improvSaturation.indexOf(true)
+      case true => improvSaturation.indexOf(true, math.max(improvSaturation.indexOf(false), 0))
+    }
+    println(s"---- ---- relative improvement: ${relImprov.zip(improvSaturation)} \n" +
             s"---- ---- selected $saturated with number of clusters ${evaluated(saturated)._1.size}")
 
     /*cands == -1 match {
