@@ -12,7 +12,7 @@ import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.utils.{Helper, PredicateDeclarations, Settings}
 import representationLearning.clusterComparison.OverlapWithARI
 import representationLearning.clusterSelection.{IncreaseSaturationCut, ModelBasedSelection, PredefinedNumber}
-import representationLearning.layer.AdaptiveSelectionLayer
+import representationLearning.layer.{AdaptiveSelectionLayer, DefinitionBasedLayer}
 
 /**
   * CLI implementing the functionality of learning new representation with
@@ -38,7 +38,7 @@ object LearnNewRepresentation {
   val useLocalRepository = parser.flag[Boolean](List("localRepo"), "should NodeRepository be constructed locally for each NeighbourhoodGraph, or one globally shared")
   val query = parser.option[String](List("query"), "comma-separated list", "list of domains to cluster; if not set, all domains are clustered")
   val maxNumberOfClusters = parser.option[Int](List("maxClusters"), "n", "maximal number of clusters to create, per domain")
-  val selectionMethod = parser.option[String](List("selection"), "predefined|model|saturation", "how to select the number of clusters per domain")
+  val selectionMethod = parser.option[String](List("selection"), "predefined|model|saturation|definition", "how to select the number of clusters per domain")
   val clusteringValidation = parser.option[String](List("clusterValidation"), "silhouette|intraClusterSimilarity", "cluster validation method")
   val tradeOffFactor = parser.option[Double](List("saturationTradeOff"), "Double", "saturation trade off parameter: sim(i) >= w * sim(i+1) [default: 0.9]")
   val outputName = parser.option[String](List("output"), "string", "name of the file to save new layer [default:newLayer.*]")
@@ -52,6 +52,7 @@ object LearnNewRepresentation {
   val nFold = parser.option[Int](List("numFolds"), "n", "number of folds for N-fold validation [default: 10]")
   val overlapThreshold = parser.option[Double](List("overlapThreshold"), "Double [0.3]", "if overlap measure smaller than this threshold, a cluster is accepted as a new predicate")
   val featureFormat = parser.flag[Boolean](List("asFeature"), "should feature representation be used to store new representation")
+  val minimalCoverage = parser.option[Double](List("minimalCoverage"), "double", "minimal coverage for a definition to be considered as large-coverage (percentage)")
 
 
   def printParameters() = {
@@ -155,6 +156,7 @@ object LearnNewRepresentation {
       case "predefined" => new PredefinedNumber(clusterPerDomain.head)
       case "model" => new ModelBasedSelection(clusterValidationMethod)
       case "saturation" => new IncreaseSaturationCut(clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
+      case _ =>  new PredefinedNumber(clusterPerDomain.head)
     }
 
 
@@ -164,23 +166,49 @@ object LearnNewRepresentation {
 
     try {
 
-      val firstLayer = new AdaptiveSelectionLayer(rootFolder.value.getOrElse("./tmp"),
-                                                  outputName.value.getOrElse("newLayer"),
-                                                  KnowledgeBase,
-                                                  domainsToCluster,
-                                                  depth.value.getOrElse(0),
-                                                  bagComparison,
-                                                  bagCombinationMethod,
-                                                  similarity.value.getOrElse("RCNT"),
-                                                  clustering,
-                                                  clusterSelector,
-                                                  clusterOverlap,
-                                                  overlapThreshold.value.getOrElse(0.3),
-                                                  maxNumberOfClusters.value.getOrElse(10),
-                                                  parameterSets,
-                                                  clusterEdges.value.getOrElse(false),
-                                                  featureFormat.value.getOrElse(false)
-      )
+      val firstLayer = selectionMethod.value.getOrElse("saturation") match {
+        case "definition" =>
+
+          val learnerDef = Map[String,String]("algorithm" -> defLearner.value.getOrElse("TildeInduce"),
+                                              "heuristic" -> tildeHeuristic.value.getOrElse("gain"),
+                                              "minCases" -> tildeMinCases.value.getOrElse(2).toString,
+                                              "ACE_ROOT" -> sys.env.getOrElse("ACE_ILP_ROOT", "/home/seba/Software/ACE-ilProlog-1.2.20/linux"))
+
+          new DefinitionBasedLayer(KnowledgeBase,
+                                  domainsToCluster,
+                                  depth.value.getOrElse(0),
+                                  maxNumberOfClusters.value.getOrElse(10),
+                                  similarity.value.getOrElse("RCNT"),
+                                  bagComparison,
+                                  bagCombinationMethod,
+                                  clustering,
+                                  minimalCoverage.value.getOrElse(0.1),
+                                  learnerDef,
+                                  parameterSets,
+                                  clusterOverlap,
+                                  overlapThreshold.value.getOrElse(0.3),
+                                  clusterEdges.value.getOrElse(false),
+                                  outputName.value.getOrElse("newLayer"),
+                                  rootFolder.value.getOrElse("./tmp"),
+                                  featureFormat.value.getOrElse(false))
+        case _ => new AdaptiveSelectionLayer(rootFolder.value.getOrElse("./tmp"),
+                                            outputName.value.getOrElse("newLayer"),
+                                            KnowledgeBase,
+                                            domainsToCluster,
+                                            depth.value.getOrElse(0),
+                                            bagComparison,
+                                            bagCombinationMethod,
+                                            similarity.value.getOrElse("RCNT"),
+                                            clustering,
+                                            clusterSelector,
+                                            clusterOverlap,
+                                            overlapThreshold.value.getOrElse(0.3),
+                                            maxNumberOfClusters.value.getOrElse(10),
+                                            parameterSets,
+                                            clusterEdges.value.getOrElse(false),
+                                            featureFormat.value.getOrElse(false)
+        )
+      }
 
       val (headerH, declH, kbH) = firstLayer.build()
 
