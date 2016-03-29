@@ -38,13 +38,16 @@ class IncreaseSaturationCut(protected val evaluateSingle: AbstractEvaluatorModel
         case false => evaluated(cl._2 + 1)._2
       }
 
-      math.abs( (previousCl - evaluated(cl._2)._2)/(evaluated(cl._2)._2 - consecutiveCl)) - (factor * evaluated(cl._2)._1.size)
+      math.abs( (previousCl - evaluated(cl._2)._2)/(evaluated(cl._2)._2 - consecutiveCl))
     })
     println(s"---- new factors: $newFactors")
 
+    val finalFactors = newFactors.zipWithIndex.map( f => f._1 - (factor * evaluated(f._2)._1.size))
+    println(s"---- with penalization: $finalFactors")
+
     //select the one with the highest score
-    val cand = newFactors.zipWithIndex.maxBy(_._1)._2
-    println(s"---- selected clustering with index $cand")
+    val cand = finalFactors.zipWithIndex.maxBy(_._1)._2
+    println(s"---- selected number of clusters ${evaluated(cand)._1.size}")
     evaluated(cand)._1
   }
 
