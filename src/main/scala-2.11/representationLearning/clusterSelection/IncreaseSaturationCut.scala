@@ -26,26 +26,26 @@ class IncreaseSaturationCut(protected val evaluateSingle: AbstractEvaluatorModel
     println(s"---- ---- saturation selection::measures for clusters: ${evals.map(x => s"${x._1}:::${x._2 + 2}")}")*/
 
     val evaluated = clusterSet.map( cl => (cl, evaluateSingle.validate(cl, elementOrdering, similarityMatrixFileName))).sortBy(_._2)
-    val tmpSat = evaluated.map(_._2).zipWithIndex.dropRight(1).map(item => item._1 >= (factor * evaluated(item._2 + 1)._2))
-    val relImprov = evaluated.map(_._2).zipWithIndex.dropRight(1).map( item => evaluated(item._2 +1)._2/item._1)
-    val improvSaturation = relImprov.dropRight(1).zipWithIndex.map( item => (factor * item._1) <= relImprov(item._2 + 1))
-    val saturated = improvSaturation.indexOf(true) < improvSaturation.indexOf(false) match {
-      case false => improvSaturation.indexOf(true)
-      case true => improvSaturation.indexOf(true, math.max(improvSaturation.indexOf(false), 0))
-    }
-    println(s"---- ---- cluster quality: ${evaluated.map(cl => (cl._1.size, cl._2))}\n" +
-            s"---- ---- relative improvement: ${relImprov.zip(improvSaturation)} \n" +
-            s"---- ---- selected $saturated ")
+    println(s"---- evaluated clusters: ${evaluated.map( cl => (cl._1.size, cl._2))}")
+    val newFactors = evaluated.map(_._2).zipWithIndex.map(cl => {
+      val previousCl = (cl._2 - 1) < 0 match {
+        case true => evaluateSingle.validate(Set(elementOrdering), elementOrdering, similarityMatrixFileName)
+        case false => evaluated(cl._2 - 1)._2
+      }
 
-    /*cands == -1 match {
-      case false => clusterSet(cands)
-      case true => clusterSet.maxBy(cluster => evaluateSingle.validate(cluster, elementOrdering, similarityMatrixFileName))
-    }*/
+      val consecutiveCl = (cl._2 + 1) >= evaluated.length match {
+        case true => 0
+        case false => evaluated(cl._2 + 1)._2
+      }
 
-    saturated == -1 match {
-      case false => evaluated(saturated)._1
-      case true => evaluated.maxBy(_._2)._1
-    }
+      math.abs( (previousCl - evaluated(cl._2)._2)/(evaluated(cl._2)._2 - consecutiveCl)) - (factor * evaluated(cl._2)._1.size)
+    })
+    println(s"---- new factors: $newFactors")
+
+    //select the one with the highest score
+    val cand = newFactors.zipWithIndex.maxBy(_._1)._2
+    println(s"---- selected clustering with index $cand")
+    evaluated(cand)._1
   }
 
 }
