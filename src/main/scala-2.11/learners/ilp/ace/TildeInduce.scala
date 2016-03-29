@@ -1,4 +1,4 @@
-package learners.ilp
+package learners.ilp.ace
 
 import relationalClustering.representation.domain.KnowledgeBase
 
