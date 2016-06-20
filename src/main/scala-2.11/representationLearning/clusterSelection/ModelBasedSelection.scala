@@ -1,6 +1,7 @@
 package representationLearning.clusterSelection
 
 import relationalClustering.clustering.evaluation.AbstractEvaluatorModel
+import relationalClustering.representation.clustering.Clustering
 
 /**
   * Implement model based selection - applies the evaluation method to each clustering, and returns the one with the highest score
@@ -8,8 +9,8 @@ import relationalClustering.clustering.evaluation.AbstractEvaluatorModel
   */
 class ModelBasedSelection(protected val evaluateSingle: AbstractEvaluatorModel) extends AbstractClusterSelection {
 
-  def selectFromClusters(clusterSet: List[Set[List[String]]], elementOrdering: List[String], similarityMatrixFileName: String) = {
-    val evals = clusterSet.filter( x => x.size > 1).map(cluster => new Tuple2(cluster, evaluateSingle.validate(cluster, elementOrdering, similarityMatrixFileName)))
+  def selectFromClusters(clusterSet: List[Clustering]) = {
+    val evals = clusterSet.filter( x => x.getClusters.length > 1).map(cluster => new Tuple2(cluster, evaluateSingle.validate(cluster)))
     println(s"---- ---- ----- ModelBasedSelection::select from clusters evaluations: ${evals.map(_._2)}")
 
     if (evals.isEmpty) {

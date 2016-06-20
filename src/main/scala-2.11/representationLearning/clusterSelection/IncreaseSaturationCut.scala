@@ -1,6 +1,7 @@
 package representationLearning.clusterSelection
 
 import relationalClustering.clustering.evaluation.AbstractEvaluatorModel
+import relationalClustering.representation.clustering.{Cluster, Clustering}
 
 /** Selects the first cluster for which the following equation holds:
   * sim(C(i)) >= factor * sim(C(i+1))
@@ -15,21 +16,21 @@ class IncreaseSaturationCut(protected val evaluateSingle: AbstractEvaluatorModel
 
   /** Applies the evaluation procedure
     *
-    * @param clusterSet               a set of clusterings
-    * @param elementOrdering          an ordering of the elements in the similarity matrix
-    * @param similarityMatrixFileName the name of the file containing the similarity matrix
+    * @param clusterSet a set of clusterings
     * */
-  override def selectFromClusters(clusterSet: List[Set[List[String]]], elementOrdering: List[String], similarityMatrixFileName: String) = {
+  override def selectFromClusters(clusterSet: List[Clustering]) = {
 
     /*val evals = clusterSet.map(cluster => evaluateSingle.validate(cluster, elementOrdering, similarityMatrixFileName)).zipWithIndex
     val cands = evals.dropRight(1).map( item => item._1 >= (factor * evals(item._2 + 1)._1)).indexOf(true)
     println(s"---- ---- saturation selection::measures for clusters: ${evals.map(x => s"${x._1}:::${x._2 + 2}")}")*/
 
-    val evaluated = clusterSet.map( cl => (cl, evaluateSingle.validate(cl, elementOrdering, similarityMatrixFileName))).sortBy(_._2)
-    println(s"---- evaluated clusters: ${evaluated.map( cl => (cl._1.size, cl._2))}")
+    val sinCl = new Cluster(clusterSet.head.getTypes, "allElemsTogether", clusterSet.head.getElementOrdering.toSet, clusterSet.head.getNeighbourhoodTreeRepo)
+
+    val evaluated = clusterSet.map( cl => (cl, evaluateSingle.validate(cl))).sortBy(_._2)
+    println(s"---- evaluated clusters: ${evaluated.map( cl => (cl._1.getClusters.length, cl._2))}")
     val newFactors = evaluated.map(_._2).zipWithIndex.map(cl => {
       val previousCl = (cl._2 - 1) < 0 match {
-        case true => evaluateSingle.validate(Set(elementOrdering), elementOrdering, similarityMatrixFileName)
+        case true => evaluateSingle.validate(new Clustering(List(sinCl), clusterSet.head.getSimilarityMeasure, clusterSet.head.getElementOrdering, clusterSet.head.getSimilarityFilename))
         case false => evaluated(cl._2 - 1)._2
       }
 
@@ -42,12 +43,12 @@ class IncreaseSaturationCut(protected val evaluateSingle: AbstractEvaluatorModel
     })
     println(s"---- new factors: $newFactors")
 
-    val finalFactors = newFactors.zipWithIndex.map( f => f._1 - (factor * evaluated(f._2)._1.size))
+    val finalFactors = newFactors.zipWithIndex.map( f => f._1 - (factor * evaluated(f._2)._1.getClusters.length))
     println(s"---- with penalization: $finalFactors")
 
     //select the one with the highest score
     val cand = finalFactors.zipWithIndex.maxBy(_._1)._2
-    println(s"---- selected number of clusters ${evaluated(cand)._1.size}")
+    println(s"---- selected number of clusters ${evaluated(cand)._1.getClusters.length}")
     evaluated(cand)._1
   }
 

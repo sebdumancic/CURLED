@@ -1,5 +1,7 @@
 package representationLearning.clusterSelection
 
+import relationalClustering.representation.clustering.Clustering
+
 /**
   * Created by seb on 09.02.16.
   */
@@ -13,10 +15,8 @@ class PredefinedNumber(protected val k: Int) extends AbstractClusterSelection {
   /** Selects the corresponding number of clusters
     *
     * @param clusterSet               a set of clusterings
-    * @param elementOrdering          no used!
-    * @param similarityMatrixFileName not used!
     **/
-  def selectFromClusters(clusterSet: List[Set[List[String]]], elementOrdering: List[String], similarityMatrixFileName: String) = {
-    clusterSet.filter( _.size == getK).head
+  def selectFromClusters(clusterSet: List[Clustering]) = {
+    clusterSet.filter(_.getClusters.length == getK).head
   }
 }
