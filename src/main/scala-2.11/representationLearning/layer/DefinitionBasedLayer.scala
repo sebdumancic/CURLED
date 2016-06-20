@@ -2,7 +2,7 @@ package representationLearning.layer
 
 import java.io.{BufferedWriter, FileWriter}
 
-import learners.ilp.{TildeInduce, TildeNFold}
+import learners.ilp.ace.{TildeInduce, TildeNFold}
 import relationalClustering.bagComparison.AbstractBagComparison
 import relationalClustering.bagComparison.bagCombination.AbstractBagCombine
 import relationalClustering.clustering.AbstractSKLearnCluster
@@ -100,7 +100,12 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
     defLearner.fitModel()
     val rules = defLearner.getDefinitions
 
-    rules.count( rule => rule.getAbsCoverage < (minimalCoverage * cluster.length))
+    println(s"---- ---- cluster coverages (max instances: ${cluster.length}): ${rules.toList.map(r => r.getAbsCoverage)}")
+
+    rules.nonEmpty match {
+      case false => 10 //if there are no rules, add a fixed penalty
+      case true => rules.count( rule => rule.getAbsCoverage < (minimalCoverage * cluster.length))
+    }
   }
 
   /** Finds the 'optimal' number of clusters of the specified domain, given the parameters
@@ -123,7 +128,7 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
       (currentClustering, evaluateClustering(currentClustering, List(dom)))
     })
 
-    println(s"---- ---- clustering evaluations: ${clusterEvals.map( cl => (cl._1.size, cl._2))}")
+    println(s"---- clustering evaluations: ${clusterEvals.map( cl => (cl._1.size, cl._2))}")
 
     clusterEvals.map( _._2).contains(0) match {
       case true => clusterEvals(clusterEvals.map(_._2).indexOf(0))._1
