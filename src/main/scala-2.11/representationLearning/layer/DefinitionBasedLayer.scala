@@ -6,10 +6,12 @@ import learners.ilp.ace.{TildeInduce, TildeNFold}
 import relationalClustering.bagComparison.AbstractBagComparison
 import relationalClustering.bagComparison.bagCombination.AbstractBagCombine
 import relationalClustering.clustering.AbstractSKLearnCluster
+import relationalClustering.representation.clustering.{Cluster, Clustering}
 import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.similarity.{SimilarityNTv2, SimilarityNeighbourhoodTrees}
 import relationalClustering.utils.{PredicateDeclarations, Settings}
 import representationLearning.clusterComparison.AbstractClusterOverlap
+import representationLearning.representation.NewRepresentation
 
 /** Creates a new layer by increasing the number of clusters until general definition of the clusters can be found (coverage > minimalCoverage), or maximal number of
   *   clusters is exceeded
@@ -46,23 +48,18 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
   /** Prepared temporary database, declarations and header of the new predicate candidates
     *
     * @param clustering clustering
-    * @param doms domains of interest
     * */
-  protected def prepareTemporaryDB(clustering: Set[List[String]], doms: List[String]) = {
+  protected def prepareTemporaryDB(clustering: Clustering) = {
     val writerDB = new BufferedWriter(new FileWriter(s"$getRoot/tmp.db"))
     val writerDecl = new BufferedWriter(new FileWriter(s"$getRoot/tmp.decl"))
-    var header = ""
 
-    clustering.zipWithIndex.foreach( clust => {
-      writerDecl.write(s"Cluster${clust._2}(${doms.map( x => "name").mkString(",")})${sys.props("line.separator")}")
-      header = header + s"Cluster${clust._2}(${doms.mkString(",")})\n"
-      writerDB.write(s"${clust._1.map( el => s"Cluster${clust._2}(${el.replace(":",",")})").mkString(s"${sys.props("line.separator")}")}")
-    })
+    clustering.printClusteringDeclaration(writerDecl)
+    clustering.printClusteringAsFacts(writerDB)
 
     writerDB.close()
     writerDecl.close()
 
-    (s"$getRoot/tmp.db", header, s"$getRoot/tmp.decl")
+    (s"$getRoot/tmp.db", clustering.getClusteringDefinition, s"$getRoot/tmp.decl")
   }
 
   /** Evaluates a given clustering on the purity of definitions of the clusters
@@ -71,12 +68,12 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
     * @param dom domain(s) of cluster elements
     * @return total number of small-coverage rules in clustering
     * */
-  protected def evaluateClustering(clustering: Set[List[String]], dom: List[String]) = {
-    val files = prepareTemporaryDB(clustering, dom)
+  protected def evaluateClustering(clustering: Clustering, dom: List[String]) = {
+    val files = prepareTemporaryDB(clustering)
     val tmpDeclarations = new PredicateDeclarations(files._3)
     val tmpKB = new KnowledgeBase(List(files._1), files._2, tmpDeclarations)
 
-    val evals = clustering.zipWithIndex.map( cl => (cl._1, evaluateCluster(cl._1, s"Cluster${cl._2}", dom, tmpKB)))
+    val evals = clustering.getClusters.map( cl => (cl, evaluateCluster(cl, cl.getClusterName, cl.getTypes, tmpKB)))
 
     evals.map( _._2).sum
   }
@@ -89,7 +86,7 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
     * @param tmpKB latent knowledge base
     * @return a number of small-coverage rules
     * */
-  protected def evaluateCluster(cluster: List[String], targetPredicate: String, dom: List[String], tmpKB: KnowledgeBase) = {
+  protected def evaluateCluster(cluster: Cluster, targetPredicate: String, dom: List[String], tmpKB: KnowledgeBase) = {
     val defLearner = definitionLearner("algorithm") match {
       case "TildeInduce" => new TildeInduce(getRoot, getKB, tmpKB, targetPredicate, if (dom.length > 1) true else false, definitionLearner("ACE_ROOT"),
         definitionLearner("heuristic"), definitionLearner("minCases").toInt)
@@ -100,11 +97,11 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
     defLearner.fitModel()
     val rules = defLearner.getDefinitions
 
-    println(s"---- ---- cluster coverages (max instances: ${cluster.length}): ${rules.toList.map(r => r.getAbsCoverage)}")
+    println(s"---- ---- cluster coverages (max instances: ${cluster.getSize}): ${rules.toList.map(r => r.getAbsCoverage)}")
 
     rules.nonEmpty match {
       case false => 10 //if there are no rules, add a fixed penalty
-      case true => rules.count( rule => rule.getAbsCoverage < (minimalCoverage * cluster.length))
+      case true => rules.count( rule => rule.getAbsCoverage < (minimalCoverage * cluster.getSize))
     }
   }
 
@@ -113,7 +110,7 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
     * @param dom domain of interest
     * @param pars parameters for the similarity measure
     * */
-  protected def clusterDomainWithParameters(dom: String, pars: List[Double]) = {
+  protected def clusterDomainWithParameters(dom: String, pars: List[Double], offset: Int) = {
     println(s"---- using parameters $pars")
 
     val similarityMeasure = measureIdentifier match {
@@ -121,10 +118,8 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
       case "RCNTv2" => new SimilarityNTv2(knowledgeBase, depth, pars, bagCompare, bagCombination, false)
     }
 
-    val filename = similarityMeasure.getObjectSimilaritySave(List(dom), getRoot)
-
     val clusterEvals = (2 to getMaxClusters).map( numClust => {
-      val currentClustering = clusteringAlg.clusterFromFile(filename._1, math.min(numClust, filename._2.length - 1))
+      val currentClustering =  clusteringAlg.clusterVertices(List(dom), similarityMeasure, numClust, offset)//clusteringAlg.clusterFromFile(filename._1, math.min(numClust, filename._2.length - 1))
       (currentClustering, evaluateClustering(currentClustering, List(dom)))
     })
 
@@ -143,10 +138,10 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
     **/
   protected def clusterDomain(dom: String) = {
     println(s"Clustering domain $dom")
-    val allCreatedClusters = collection.mutable.Set[Set[List[String]]]()
+    val allCreatedClusters = collection.mutable.Set[Clustering]()
 
-    parameterList.foreach(par => {
-      val selectedCluster = clusterDomainWithParameters(dom, par)
+    parameterList.zipWithIndex.foreach(par => {
+      val selectedCluster = clusterDomainWithParameters(dom, par._1, par._2)
 
       allCreatedClusters.nonEmpty && selectedCluster.size > 1 match {
         case true =>
@@ -156,7 +151,7 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
             println(s"---- ---- ---- Cluster accepted ($maxOverlap)")
           }
           else {
-            println(s"---- ---- ---- Cluster rejected because $maxOverlap: $par, $dom")
+            println(s"---- ---- ---- Cluster rejected because $maxOverlap: ${par._1}, $dom")
           }
         case false =>
           if (selectedCluster.size > 1) {
@@ -174,7 +169,7 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
     * @param pars parameters for similarity measure
     * @return selected clustering
     * */
-  protected def clusterHyperedgesWithParameters(domains: List[String], pars: List[Double]) = {
+  protected def clusterHyperedgesWithParameters(domains: List[String], pars: List[Double], offset: Int) = {
     println(s"---- using parameters $pars")
 
     val similarityMeasure = measureIdentifier match {
@@ -182,10 +177,8 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
       case "RCNTv2" => new SimilarityNTv2(knowledgeBase, depth, pars, bagCompare, bagCombination, false)
     }
 
-    val filename = similarityMeasure.getHyperEdgeSimilaritySave(domains, getRoot)
-
     val clusterEvals = (2 to getMaxClusters).map( numClust => {
-      val currentClustering = clusteringAlg.clusterFromFile(filename._1, math.min(numClust, filename._2.length - 1))
+      val currentClustering = clusteringAlg.clusterEdges(domains, similarityMeasure, numClust, offset)// clusteringAlg.clusterFromFile(filename._1, math.min(numClust, filename._2.length - 1))
       (currentClustering, evaluateClustering(currentClustering, domains))
     })
 
@@ -202,10 +195,10 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
     * */
   protected def clusterHyperedges(domains: List[String]) = {
     println(s"Clustering domains $domains")
-    val allCreatedClusters = collection.mutable.Set[Set[List[String]]]()
+    val allCreatedClusters = collection.mutable.Set[Clustering]()
 
-    parameterList.foreach( pars => {
-      val selectedCluster = clusterHyperedgesWithParameters(domains, pars)
+    parameterList.zipWithIndex.foreach( pars => {
+      val selectedCluster = clusterHyperedgesWithParameters(domains, pars._1, pars._2)
 
       allCreatedClusters.nonEmpty && selectedCluster.size > 1 match {
         case true =>
@@ -240,24 +233,22 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
 
   /** Build a layer by clustering each specified domain and the existing hyperedges is specified
     *
-    * @return (predicate definitions file, predicate declarations file, knowledge base file) - all file paths
+    * @return new representation obtained with clustering
     **/
   def build() = {
 
-    domainsToCluster.foreach(dom => {
-      val res = clusterDomain(dom)
-      writeFiles(res, List(dom))
+    var clusters = domainsToCluster.foldLeft(Set[Clustering]())( (acc, dom) => {
+      acc ++ clusterDomain(dom)
     })
 
     if (doClusterHyperedges) {
-      (domainsToCluster ++ domainsToCluster).sorted.combinations(2).filter(com => existsConnection(com)).foreach(comb => {
-        val res = clusterHyperedges(comb)
-        writeFiles(res, comb)
+      clusters = clusters ++ (domainsToCluster ++ domainsToCluster).sorted.combinations(2).filter(com => existsConnection(com)).foldLeft(Set[Clustering]())((acc, comb) => {
+        acc ++ clusterHyperedges(comb)
       })
     }
 
     closeFiles()
-    (getHeaderName, getDeclarationsName, getKBName)
+    new NewRepresentation(clusters)
   }
 
 }
