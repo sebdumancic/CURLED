@@ -15,8 +15,8 @@ abstract class AbstractLayer(protected val rootFolder: String,
                              protected val asFeature: Boolean) {
 
   protected val headerFile = new BufferedWriter(new FileWriter(s"$getRoot/$getOutputName.def"))
-  protected val declarationsFile = new BufferedWriter(new FileWriter(s"$getRoot/$getOutputName.decl"))
-  protected val kbFile = new BufferedWriter(new FileWriter(s"$getRoot/$getOutputName.kb"))
+  protected val declarationsFile = new BufferedWriter(new FileWriter(s"$getRoot/$getOutputName.dcl"))
+  protected val kbFile = new BufferedWriter(new FileWriter(s"$getRoot/$getOutputName.db"))
 
   /** Returns the root folder */
   protected def getRoot = {
@@ -45,12 +45,12 @@ abstract class AbstractLayer(protected val rootFolder: String,
 
   /** Return the path to the declarations file */
   def getDeclarationsName = {
-    s"$getRoot/$getOutputName.decl"
+    s"$getRoot/$getOutputName.dcl"
   }
 
   /** Returns the path to the knowledge base file */
   def getKBName = {
-    s"$getRoot/$getOutputName.kb"
+    s"$getRoot/$getOutputName.db"
   }
 
   /** Returns the knowledge base file [[BufferedWriter]] */
