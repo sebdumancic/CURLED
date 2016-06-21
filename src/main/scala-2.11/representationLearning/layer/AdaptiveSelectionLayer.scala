@@ -3,11 +3,13 @@ package representationLearning.layer
 import relationalClustering.bagComparison.AbstractBagComparison
 import relationalClustering.bagComparison.bagCombination.AbstractBagCombine
 import relationalClustering.clustering.AbstractSKLearnCluster
+import relationalClustering.representation.clustering.Clustering
 import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.similarity.{SimilarityNTv2, SimilarityNeighbourhoodTrees}
 import relationalClustering.utils.Settings
 import representationLearning.clusterComparison.AbstractClusterOverlap
 import representationLearning.clusterSelection.AbstractClusterSelection
+import representationLearning.representation.NewRepresentation
 
 
 /**
@@ -48,7 +50,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
     **/
   protected def clusterDomain(dom: String) = {
     println(s"Clustering domain: $dom")
-    val allCreatedClusters = collection.mutable.Set[Set[List[String]]]()
+    val allCreatedClusters = collection.mutable.Set[Clustering]()
 
     parameterList.zipWithIndex.foreach(pars => {
       println(s"---- using parameters ${pars._1}")
@@ -58,17 +60,17 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
         case "RCNTv2" => new SimilarityNTv2(knowledgeBase, depth, pars._1, bagCompare, bagCombination, false)
       }
 
-      var createdClusters = List[Set[List[String]]]()
+      var createdClusters = List[Clustering]()
 
-      val filename = similarityMeasure.getObjectSimilaritySave(List(dom), getRoot)
+      //val filename = similarityMeasure.getObjectSimilaritySave(List(dom), getRoot)
 
       (2 to maxClusters).foreach(numCl => {
-        createdClusters = createdClusters :+ clusteringAlg.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
+        createdClusters = createdClusters :+ clusteringAlg.clusterVertices(List(dom), similarityMeasure, numCl, pars._2) // clusteringAlg.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
       })
 
-      val selectedCluster = clusterSelect.selectFromClusters(createdClusters, filename._2.map(_._1), filename._1)
+      val selectedCluster = clusterSelect.selectFromClusters(createdClusters)
 
-      allCreatedClusters.nonEmpty && selectedCluster.size > 1 match {
+      allCreatedClusters.nonEmpty && selectedCluster.getClusters.length > 1 match {
         case true =>
           val maxOverlap = allCreatedClusters.map(cl => clusterOverlap.compare(cl, selectedCluster)).max
           if (maxOverlap < overlapThreshold) {
@@ -79,7 +81,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
             println(s"---- ---- ---- Cluster rejected because $maxOverlap: $pars, $dom")
           }
         case false =>
-          if (selectedCluster.size > 1) {
+          if (selectedCluster.getClusters.length > 1) {
             allCreatedClusters += selectedCluster
           }
       }
@@ -97,7 +99,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
     **/
   protected def clusterHyperedges(doms: List[String]) = {
     println(s"Clustering hyperedges: $doms")
-    val allCreatedClusters = collection.mutable.Set[Set[List[String]]]()
+    val allCreatedClusters = collection.mutable.Set[Clustering]()
 
     parameterList.zipWithIndex.foreach(pars => {
       println(s"---- using parameters ${pars._1}")
@@ -107,14 +109,14 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
         case "RCNTv2" => new SimilarityNTv2(knowledgeBase, depth, pars._1, bagCompare, bagCombination, false)
       }
 
-      var createdClusters = List[Set[List[String]]]()
-      val filename = similarityMeasure.getHyperEdgeSimilaritySave(doms, getRoot)
+      var createdClusters = List[Clustering]()
+      //val filename = similarityMeasure.getHyperEdgeSimilaritySave(doms, getRoot)
 
       (2 to maxClusters).foreach(numCl => {
-        createdClusters = createdClusters :+ clusteringAlg.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
+        createdClusters = createdClusters :+ clusteringAlg.clusterEdges(doms, similarityMeasure, numCl, pars._2) //clusteringAlg.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
       })
 
-      val selectedCluster = clusterSelect.selectFromClusters(createdClusters, filename._2.map(_.mkString(":")), filename._1)
+      val selectedCluster = clusterSelect.selectFromClusters(createdClusters)
 
       allCreatedClusters.nonEmpty match {
         case true =>
@@ -138,23 +140,21 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
 
   /** Build a layer by clustering each specified domain and the existing hyperedges is specified
     *
-    * @return (predicate definitions file, predicate declarations file, knowledge base file) - all file paths
+    * @return new representation obtained with clustering
     **/
   def build() = {
-    domainsToCluster.foreach(dom => {
 
-      val res = clusterDomain(dom)
-      writeFiles(res, List(dom))
+    var clusters = domainsToCluster.foldLeft(Set[Clustering]())( (acc, dom) => {
+      acc ++ clusterDomain(dom)
     })
 
     if (doClusterHyperedges) {
-      (domainsToCluster ++ domainsToCluster).sorted.combinations(2).filter(com => existsConnection(com)).foreach(comb => {
-        val res = clusterHyperedges(comb)
-        writeFiles(res, comb)
+      clusters = clusters ++ (domainsToCluster ++ domainsToCluster).sorted.combinations(2).filter(com => existsConnection(com)).foldLeft(Set[Clustering]())( (acc, comb) => {
+        acc ++ clusterHyperedges(comb)
       })
     }
 
     closeFiles()
-    (getHeaderName, getDeclarationsName, getKBName)
+    new NewRepresentation(clusters)
   }
 }
