@@ -11,7 +11,7 @@ import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.similarity.{SimilarityNTv2, SimilarityNeighbourhoodTrees}
 import relationalClustering.utils.{PredicateDeclarations, Settings}
 import representationLearning.clusterComparison.AbstractClusterOverlap
-import representationLearning.representation.NewRepresentation
+import representationLearning.representation.ClusteringRepresentation
 
 /** Creates a new layer by increasing the number of clusters until general definition of the clusters can be found (coverage > minimalCoverage), or maximal number of
   *   clusters is exceeded
@@ -248,7 +248,7 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
     }
 
     closeFiles()
-    new NewRepresentation(clusters)
+    new ClusteringRepresentation(clusters)
   }
 
 }

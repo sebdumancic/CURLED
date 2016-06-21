@@ -9,7 +9,7 @@ import relationalClustering.similarity.{SimilarityNTv2, SimilarityNeighbourhoodT
 import relationalClustering.utils.Settings
 import representationLearning.clusterComparison.AbstractClusterOverlap
 import representationLearning.clusterSelection.AbstractClusterSelection
-import representationLearning.representation.NewRepresentation
+import representationLearning.representation.ClusteringRepresentation
 
 
 /**
@@ -155,6 +155,6 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
     }
 
     closeFiles()
-    new NewRepresentation(clusters)
+    new ClusteringRepresentation(clusters)
   }
 }
