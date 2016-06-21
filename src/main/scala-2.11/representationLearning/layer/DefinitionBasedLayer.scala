@@ -242,7 +242,8 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
     })
 
     if (doClusterHyperedges) {
-      clusters = clusters ++ (domainsToCluster ++ domainsToCluster).sorted.combinations(2).filter(com => existsConnection(com)).foldLeft(Set[Clustering]())((acc, comb) => {
+      val hyperedgeDomains = knowledgeBase.getExistingHyperedges(2, domainsToCluster)
+      clusters = clusters ++ hyperedgeDomains.foldLeft(Set[Clustering]())((acc, comb) => {
         acc ++ clusterHyperedges(comb)
       })
     }
