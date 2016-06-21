@@ -51,7 +51,7 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
     * */
   protected def prepareTemporaryDB(clustering: Clustering) = {
     val writerDB = new BufferedWriter(new FileWriter(s"$getRoot/tmp.db"))
-    val writerDecl = new BufferedWriter(new FileWriter(s"$getRoot/tmp.decl"))
+    val writerDecl = new BufferedWriter(new FileWriter(s"$getRoot/tmp.dcl"))
 
     clustering.printClusteringDeclaration(writerDecl)
     clustering.printClusteringAsFacts(writerDB)
@@ -59,7 +59,7 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
     writerDB.close()
     writerDecl.close()
 
-    (s"$getRoot/tmp.db", clustering.getClusteringDefinition, s"$getRoot/tmp.decl")
+    (s"$getRoot/tmp.db", clustering.getClusteringDefinition, s"$getRoot/tmp.dcl")
   }
 
   /** Evaluates a given clustering on the purity of definitions of the clusters
