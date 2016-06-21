@@ -3,7 +3,7 @@ package representationLearning.layer
 import java.io.{BufferedWriter, FileWriter}
 
 import relationalClustering.representation.clustering.Clustering
-import representationLearning.representation.NewRepresentation
+import representationLearning.representation.ClusteringRepresentation
 import utils.ClusterFactFormat
 
 /**
@@ -125,5 +125,5 @@ abstract class AbstractLayer(protected val rootFolder: String,
     *
     * @return new representation obtained with clustering
     **/
-  def build(): NewRepresentation
+  def build(): ClusteringRepresentation
 }

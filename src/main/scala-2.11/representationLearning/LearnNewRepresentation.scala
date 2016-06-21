@@ -1,6 +1,6 @@
 package representationLearning
 
-import java.io.{File, PrintWriter}
+import java.io.{BufferedWriter, File, FileWriter, PrintWriter}
 
 import learners.ilp.ace.{TildeInduce, TildeNFold}
 import org.clapper.argot.ArgotParser
@@ -53,6 +53,8 @@ object LearnNewRepresentation {
   val overlapThreshold = parser.option[Double](List("overlapThreshold"), "Double [0.3]", "if overlap measure smaller than this threshold, a cluster is accepted as a new predicate")
   val featureFormat = parser.flag[Boolean](List("asFeature"), "should feature representation be used to store new representation")
   val minimalCoverage = parser.option[Double](List("minimalCoverage"), "double", "minimal coverage for a definition to be considered as large-coverage (percentage)")
+  val newFacts = parser.option[String](List("newKB"), "filename", "a knowledge base to be mapped to the latent representation")
+  val latentOutput = parser.option[String](List("latentOutput"), "filename", "file to save a transformed [newKB] representation")
 
 
   def printParameters() = {
@@ -210,8 +212,9 @@ object LearnNewRepresentation {
         )
       }
 
-      val (headerH, declH, kbH) = firstLayer.build()
+      val newRep = firstLayer.build()
 
+      val (headerH, declH, kbH) = newRep.write(outputName.value.getOrElse("newLayer"), rootFolder.value.getOrElse("./tmp"))
       val newHeaderFile = new File(headerH)
       val newDeclarationFile = new File(declH)
       val newKBFile = new File(kbH)
@@ -243,6 +246,14 @@ object LearnNewRepresentation {
           println("*"*10)
 
         })
+      }
+
+      if (newFacts.value.getOrElse("Nil") != "Nil") {
+        val latentKB = new KnowledgeBase(List(newFacts.value.get), Helper.readFile(head.value.get).mkString("\n"), predicateDeclarations)
+        val latentFacts = newRep.mapNewFacts(latentKB)
+        val LKBOutput = new BufferedWriter(new FileWriter(latentOutput.value.getOrElse(s"latent_representation.db")))
+        LKBOutput.write(latentFacts.toList.sorted.mkString(sys.props("line.separator")))
+        LKBOutput.close()
       }
     }
     catch {
