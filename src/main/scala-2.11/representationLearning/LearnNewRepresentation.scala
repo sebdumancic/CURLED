@@ -23,8 +23,8 @@ object LearnNewRepresentation {
   //parser specification
   import org.clapper.argot.ArgotConverters._
 
-  val parser = new ArgotParser("LearnNewRepresentation.jar", preUsage = Some("Version 1.1"))
-  val dbs = parser.multiOption[String](List("db"), "knowledgeBase", "database(s) with data to cluster")
+  val parser = new ArgotParser("LearnNewRepresentation.jar", preUsage = Some("Version 2.11"))
+  val dbs = parser.option[String](List("db"), "knowledgeBase", "comma-separated list of database(s) with data to cluster")
   val head = parser.option[String](List("domain"), "domain definition", "header for the knowledge base(s); specification of logical predicates")
   val declarationFile = parser.option[String](List("declarations"), "file path", "file containing declarations of predicates")
   val depth = parser.option[Int](List("depth"), "n", "depth of the neighbourhood graph")
@@ -64,14 +64,14 @@ object LearnNewRepresentation {
     println(s"---- clustering algorithm: ${algorithm.value.getOrElse("Spectral")}")
     println(s"---- similarity measure: ${similarity.value.getOrElse("RCNT")}")
     println(s"---- bag similarity measure: ${bag.value.getOrElse("chiSquared")}")
-    println(s"---- bag combination method: ${bagCombination.value.getOrElse("intersection")}")
+    println(s"---- bag combination method: ${bagCombination.value.getOrElse("union")}")
     println(s"---- linkage (for Hierarchical clustering): ${linkage.value.getOrElse("average")}")
     println(s"---- using local directory: ${useLocalRepository.value.getOrElse(false)}")
     println(s"---- maximal number of clusters: ${maxNumberOfClusters.value.getOrElse(10)}")
     println(s"---- saving everything with name: ${outputName.value.getOrElse("newLayer")}")
     println()
     println(s"---- query: ${query.value.get}")
-    println(s"---- clustering selection method: ${selectionMethod.value.getOrElse("predefined")}")
+    println(s"---- clustering selection method: ${selectionMethod.value.getOrElse("saturation")}")
     println(s"---- clustering validation method: ${clusteringValidation.value.getOrElse("intraClusterSimilarity")}")
     println(s"---- saturation selection trade-off factor: ${tradeOffFactor.value.getOrElse(0.9)}")
     println(s"---- clustering edges: ${clusterEdges.value.getOrElse(false)}")
@@ -106,7 +106,7 @@ object LearnNewRepresentation {
     printParameters()
 
     val predicateDeclarations = new PredicateDeclarations(declarationFile.value.get)
-    val KnowledgeBase = new KnowledgeBase(dbs.value, Helper.readFile(head.value.get).mkString("\n"), predicateDeclarations)
+    val KnowledgeBase = new KnowledgeBase(dbs.value.get.split(","), Helper.readFile(head.value.get).mkString("\n"), predicateDeclarations)
 
     // domains to cluster
     val domainsToCluster = query.value.isEmpty match {
@@ -134,7 +134,7 @@ object LearnNewRepresentation {
       case "union" => new UnionBagSimilarity() //new Unionsimilarity()
     }
 
-    val bagCombinationMethod = bagCombination.value.getOrElse("intersection") match {
+    val bagCombinationMethod = bagCombination.value.getOrElse("union") match {
       case "union" => new UnionCombination()
       case "intersection" => new IntersectionCombination()
     }
@@ -154,7 +154,7 @@ object LearnNewRepresentation {
       case "intraClusterSimilarity" => new AverageIntraClusterSimilarity()
     }
 
-    val clusterSelector = selectionMethod.value.getOrElse("predefined") match {
+    val clusterSelector = selectionMethod.value.getOrElse("saturation") match {
       case "predefined" => new PredefinedNumber(clusterPerDomain.head)
       case "model" => new ModelBasedSelection(clusterValidationMethod)
       case "saturation" => new IncreaseSaturationCut(clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
