@@ -36,15 +36,10 @@ class OverlapWithARI(protected val rootFolder: String) extends AbstractClusterOv
   protected def saveAsLabels(cluster: Clustering) = {
     val writer = new BufferedWriter(new FileWriter(s"$getRoot/tmp_labels.db"))
 
-    try {
-      cluster.getClusters.foreach(clust => {
-        writer.write(clust.getClusterFacts.mkString(sys.props("line.separator")))
-      })
-    }
-    finally {
-      writer.close()
-    }
-
+    cluster.getClusters.foreach(clust => {
+      writer.write(clust.getClusterFacts.mkString(sys.props("line.separator")) + sys.props("line.separator"))
+    })
+    writer.close()
   }
 
   /** cleans the artifacts produced */

@@ -70,7 +70,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
 
       val selectedCluster = clusterSelect.selectFromClusters(createdClusters)
 
-      allCreatedClusters.nonEmpty && selectedCluster.getClusters.length > 1 match {
+      allCreatedClusters.nonEmpty && selectedCluster.size > 1 match {
         case true =>
           val maxOverlap = allCreatedClusters.map(cl => clusterOverlap.compare(cl, selectedCluster)).max
           if (maxOverlap < overlapThreshold) {
@@ -81,7 +81,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
             println(s"---- ---- ---- Cluster rejected because $maxOverlap: $pars, $dom")
           }
         case false =>
-          if (selectedCluster.getClusters.length > 1) {
+          if (selectedCluster.size > 1) {
             allCreatedClusters += selectedCluster
           }
       }
@@ -118,7 +118,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
 
       val selectedCluster = clusterSelect.selectFromClusters(createdClusters)
 
-      allCreatedClusters.nonEmpty match {
+      allCreatedClusters.nonEmpty && selectedCluster.size > 1 match {
         case true =>
           val maxOverlap = allCreatedClusters.map(cl => clusterOverlap.compare(cl, selectedCluster)).max
           if (maxOverlap < overlapThreshold) {
@@ -129,7 +129,9 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
             println(s"---- ---- ---- Cluster rejected because $maxOverlap: ${pars._1}, $doms")
           }
         case false =>
-          allCreatedClusters += selectedCluster
+          if (selectedCluster.size > 1) {
+            allCreatedClusters += selectedCluster
+          }
       }
 
       similarityMeasure.clearCache()
@@ -150,6 +152,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
 
     if (doClusterHyperedges) {
       val hyperedgeDomains = knowledgeBase.getExistingHyperedges(2, domainsToCluster)
+      println(s"* clustering following hyperedges: $hyperedgeDomains")
       clusters = clusters ++ hyperedgeDomains.foldLeft(Set[Clustering]())( (acc, comb) => {
         acc ++ clusterHyperedges(comb)
       })
