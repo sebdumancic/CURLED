@@ -65,7 +65,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
       //val filename = similarityMeasure.getObjectSimilaritySave(List(dom), getRoot)
 
       (2 to maxClusters).foreach(numCl => {
-        createdClusters = createdClusters :+ clusteringAlg.clusterVertices(List(dom), similarityMeasure, numCl, pars._2) // clusteringAlg.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
+        createdClusters = createdClusters :+ clusteringAlg.clusterVertices(List(dom), similarityMeasure, numCl, pars._2)
       })
 
       val selectedCluster = clusterSelect.selectFromClusters(createdClusters)
@@ -113,7 +113,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
       //val filename = similarityMeasure.getHyperEdgeSimilaritySave(doms, getRoot)
 
       (2 to maxClusters).foreach(numCl => {
-        createdClusters = createdClusters :+ clusteringAlg.clusterEdges(doms, similarityMeasure, numCl, pars._2) //clusteringAlg.clusterFromFile(filename._1, math.min(numCl, filename._2.length - 1))
+        createdClusters = createdClusters :+ clusteringAlg.clusterEdges(doms, similarityMeasure, numCl, pars._2)
       })
 
       val selectedCluster = clusterSelect.selectFromClusters(createdClusters)
