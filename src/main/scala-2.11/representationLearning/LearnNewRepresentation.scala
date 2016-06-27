@@ -59,6 +59,7 @@ object LearnNewRepresentation {
 
   def printParameters() = {
     println("CLUSTERING WITH THE FOLLOWING PARAMETERS")
+    println(s"---- databases ${dbs.value.get.split(",").toList}")
     println(s"---- depth: ${depth.value.getOrElse(0)}")
     println(s"---- parameter set: ${weights.value.getOrElse("0.2,0.2,0.2,0.2,0.2")}")
     println(s"---- clustering algorithm: ${algorithm.value.getOrElse("Spectral")}")
