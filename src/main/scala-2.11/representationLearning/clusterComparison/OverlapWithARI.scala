@@ -24,7 +24,7 @@ class OverlapWithARI(protected val rootFolder: String) extends AbstractClusterOv
   def compare(cluster1: Clustering, cluster2: Clustering) = {
     saveAsLabels(cluster1)
 
-    val fakeLabels = new LabelsContainer(s"$getRoot/tmp_labels.db")
+    val fakeLabels = new LabelsContainer(Seq(s"$getRoot/tmp_labels.db"))
     val ari = new AdjustedRandIndex(getRoot)
 
     val res = ari.validate(cluster2, fakeLabels)
