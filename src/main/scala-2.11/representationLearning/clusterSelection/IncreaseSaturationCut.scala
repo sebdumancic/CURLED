@@ -3,6 +3,7 @@ package representationLearning.clusterSelection
 import relationalClustering.clustering.evaluation.AbstractEvaluatorModel
 import relationalClustering.representation.clustering.{Cluster, Clustering}
 
+
 /** Selects the first cluster for which the following equation holds:
   * sim(C(i)) >= factor * sim(C(i+1))
   *
@@ -20,10 +21,6 @@ class IncreaseSaturationCut(protected val evaluateSingle: AbstractEvaluatorModel
     * */
   override def selectFromClusters(clusterSet: List[Clustering]) = {
 
-    /*val evals = clusterSet.map(cluster => evaluateSingle.validate(cluster, elementOrdering, similarityMatrixFileName)).zipWithIndex
-    val cands = evals.dropRight(1).map( item => item._1 >= (factor * evals(item._2 + 1)._1)).indexOf(true)
-    println(s"---- ---- saturation selection::measures for clusters: ${evals.map(x => s"${x._1}:::${x._2 + 2}")}")*/
-
     val sinCl = new Cluster(clusterSet.head.getTypes, "allElemsTogether", clusterSet.head.getElementOrdering.toSet, clusterSet.head.getNeighbourhoodTreeRepo)
 
     val evaluated = clusterSet.map( cl => (cl, evaluateSingle.validate(cl))).sortBy(_._2)
@@ -39,11 +36,13 @@ class IncreaseSaturationCut(protected val evaluateSingle: AbstractEvaluatorModel
         case false => evaluated(cl._2 + 1)._2
       }
 
-      math.abs( (previousCl - evaluated(cl._2)._2)/(evaluated(cl._2)._2 - consecutiveCl))
+      math.abs( (previousCl - evaluated(cl._2)._2)/(evaluated(cl._2)._2  - consecutiveCl))
     })
     println(s"---- new factors: $newFactors")
 
-    val finalFactors = newFactors.zipWithIndex.map( f => f._1 - (factor * evaluated(f._2)._1.getClusters.length))
+    val finalFactors = newFactors.zipWithIndex.map( f => {
+      if ( f._1.isNaN || f._1.isInfinity || f._1 == 0.0) { (newFactors(math.max(0, f._2 - 1)) + newFactors(math.min(newFactors.length - 1, f._2 + 1)))/2.0 } else { f._1 } - (factor * evaluated(f._2)._1.getClusters.length)
+    })
     println(s"---- with penalization: $finalFactors")
 
     //select the one with the highest score

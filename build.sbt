@@ -1,6 +1,6 @@
 name := "SRLRepresentationLearning"
 
-version := "1.1"
+version := "1.2.0"
 
 scalaVersion := "2.11.7"
 
