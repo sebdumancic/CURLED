@@ -45,7 +45,7 @@ class IncreaseSaturationCut(protected val evaluateSingle: AbstractEvaluatorModel
 
     //select the one with the highest score
     val cand = finalFactors.zipWithIndex.maxBy(_._1)._2
-    println(s"---- selected number of clusters ${evaluated(cand)._1.getClusters.length}")
+    println(s"---- selected number of clusters ${evaluated(cand)._1.getClusters.length} with id $cand")
     evaluated(cand)._1
   }
 
