@@ -251,7 +251,7 @@ object LearnNewRepresentation {
 
       if (newFacts.value.getOrElse("Nil") != "Nil") {
         val latentKB = new KnowledgeBase(List(newFacts.value.get), Helper.readFile(head.value.get).mkString("\n"), predicateDeclarations)
-        val latentFacts = newRep.mapNewFacts(latentKB)
+        val latentFacts = newRep.mapNewFacts(latentKB, linkage.value.getOrElse("average"))
         val LKBOutput = new BufferedWriter(new FileWriter(s"${rootFolder.value.getOrElse("./tmp")}/${latentOutput.value.getOrElse(s"latent_representation.db")}"))
         LKBOutput.write(latentFacts.toList.sorted.mkString(sys.props("line.separator")))
         LKBOutput.close()

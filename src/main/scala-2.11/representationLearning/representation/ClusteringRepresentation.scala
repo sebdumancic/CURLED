@@ -46,7 +46,7 @@ class ClusteringRepresentation(protected val clusterings: Set[Clustering]) {
     * @param linkage linkage for assigning to the closest cluster (average, maximal, minimal)
     * @return a set of facts
     * */
-  def mapNewFacts(kb: KnowledgeBase, linkage: String = "average") = {
+  def mapNewFacts(kb: KnowledgeBase, linkage: String = "maximal") = {
     val ntDepth: Int = clusterings.head.getSimilarityMeasure.getDepth
     val nodeRepo = new NodeRepository(kb)
     val ntRepo = collection.mutable.Map[(String,String), NeighbourhoodGraph]()
@@ -60,7 +60,9 @@ class ClusteringRepresentation(protected val clusterings: Set[Clustering]) {
 
         // over all clusterings of the same type
         acc_i ++ clusterings.filter( _.vertexClustering ).filter( _.getTypes.head == dom.getName ).foldLeft(Set[String]())( (acc_ii, cl) => {
-          acc_ii + s"${cl.assignToClosestCluster(List(elemNT), linkage).getClusterName}($elem)"
+          val clusterSimilarities = cl.assignToClosestCluster(List(elemNT), linkage)
+          val closest = clusterSimilarities.maxBy(_._2)._1
+          acc_ii + s"${closest.getClusterName}($elem)"
         })
       })
     })
@@ -76,7 +78,9 @@ class ClusteringRepresentation(protected val clusterings: Set[Clustering]) {
         case true => acc ++ existingEdges.foldLeft(Set[String]())( (acc_i, edge) => {
           val ntRepresentation = edge.zip(comb).map( e => ntRepo(e._1, e._2))
           acc_i ++ clusterings.filterNot(_.vertexClustering).filter(_.getTypes == comb).foldLeft(Set[String]())( (acc_ii, cl) => {
-            acc_ii + s"${cl.assignToClosestCluster(ntRepresentation, linkage).getClusterName}(${edge.mkString(",")})"
+            val clusterSimilarities = cl.assignToClosestCluster(ntRepresentation, linkage)
+            val closest = clusterSimilarities.maxBy(_._2)._1
+            acc_ii + s"${closest.getClusterName}(${edge.mkString(",")})"
           })
         })
       }
