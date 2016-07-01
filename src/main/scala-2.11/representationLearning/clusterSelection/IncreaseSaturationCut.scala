@@ -37,12 +37,10 @@ class IncreaseSaturationCut(protected val evaluateSingle: AbstractEvaluatorModel
       }
 
       math.abs( (previousCl - evaluated(cl._2)._2)/(evaluated(cl._2)._2  - consecutiveCl))
-    })
+    }).map(t => if (t.isNaN || t.isInfinity || t.isInfinite || t.isNegInfinity || t.isPosInfinity) 0.0 else t)
     println(s"---- new factors: $newFactors")
 
-    val finalFactors = newFactors.zipWithIndex.map( f => {
-      if ( f._1.isNaN || f._1.isInfinity || f._1 == 0.0) { (newFactors(math.max(0, f._2 - 1)) + newFactors(math.min(newFactors.length - 1, f._2 + 1)))/2.0 } else { f._1 } - (factor * evaluated(f._2)._1.getClusters.length)
-    })
+    val finalFactors = newFactors.zipWithIndex.map( f => f._1  - (factor * evaluated(f._2)._1.getClusters.length))
     println(s"---- with penalization: $finalFactors")
 
     //select the one with the highest score
