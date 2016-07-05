@@ -2,6 +2,7 @@ package representationLearning.layer
 
 import java.io.{BufferedWriter, FileWriter}
 
+import relationalClustering.neighbourhood.NeighbourhoodGraph
 import relationalClustering.representation.clustering.Clustering
 import representationLearning.representation.ClusteringRepresentation
 import utils.ClusterFactFormat
@@ -17,6 +18,25 @@ abstract class AbstractLayer(protected val rootFolder: String,
   protected val headerFile = new BufferedWriter(new FileWriter(s"$getRoot/$getOutputName.def"))
   protected val declarationsFile = new BufferedWriter(new FileWriter(s"$getRoot/$getOutputName.dcl"))
   protected val kbFile = new BufferedWriter(new FileWriter(s"$getRoot/$getOutputName.db"))
+  protected val neighTreeCache = collection.mutable.Map[(String,String), NeighbourhoodGraph]()
+
+
+  /** Adds a neighbourhood tree to the neighbourhood tree cache */
+  protected def addToCache(key: (String,String), value: NeighbourhoodGraph) = {
+      neighTreeCache(key) = value
+  }
+
+  /** Adds entire collection of neighbourhood trees to cache*/
+  protected def addTreesToCache(coll: Map[(String,String), NeighbourhoodGraph]) = {
+    coll.filter( item => !neighTreeCache.contains(item._1)).foreach( item => {
+      addToCache(item._1, item._2)
+    })
+  }
+
+  /** Returns a global neighbourhood tree cache */
+  protected def getNeighTreeCache = {
+    neighTreeCache.toMap
+  }
 
   /** Returns the root folder */
   protected def getRoot = {

@@ -56,7 +56,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
       println(s"---- using parameters ${pars._1}")
 
       val similarityMeasure = measureIdentifier match {
-        case "RCNT" => new SimilarityNeighbourhoodTrees(knowledgeBase, depth, pars._1, bagCompare, bagCombination, false)
+        case "RCNT" => new SimilarityNeighbourhoodTrees(knowledgeBase, depth, pars._1, bagCompare, bagCombination, getNeighTreeCache)
         case "RCNTv2" => new SimilarityNTv2(knowledgeBase, depth, pars._1, bagCompare, bagCombination, false)
       }
 
@@ -86,7 +86,8 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
           }
       }
 
-      similarityMeasure.clearCache()
+      addTreesToCache(similarityMeasure.getNeighbourhoodGraphCache)
+      //similarityMeasure.clearCache()
     })
 
     allCreatedClusters.toSet
@@ -105,7 +106,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
       println(s"---- using parameters ${pars._1}")
 
       val similarityMeasure = measureIdentifier match {
-        case "RCNT" => new SimilarityNeighbourhoodTrees(knowledgeBase, depth, pars._1, bagCompare, bagCombination, false)
+        case "RCNT" => new SimilarityNeighbourhoodTrees(knowledgeBase, depth, pars._1, bagCompare, bagCombination, getNeighTreeCache)
         case "RCNTv2" => new SimilarityNTv2(knowledgeBase, depth, pars._1, bagCompare, bagCombination, false)
       }
 
@@ -134,7 +135,8 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
           }
       }
 
-      similarityMeasure.clearCache()
+      addTreesToCache(similarityMeasure.getNeighbourhoodGraphCache)
+      //similarityMeasure.clearCache()
     })
 
     allCreatedClusters.toSet
