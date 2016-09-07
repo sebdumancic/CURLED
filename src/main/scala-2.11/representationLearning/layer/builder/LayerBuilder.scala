@@ -14,20 +14,9 @@ class LayerBuilder(protected val definedLayer: AbstractLayer,
                    protected val linkage: String) {
 
   protected val newRep = definedLayer.build()
-  protected var newRepresentationHeaderFilename: String = _
-  protected var newRepresentationDeclarationsFilename: String = _
-  protected var newRepresentationKBFilename: String = _
-
 
   def writeNewRepresentation(filename: String) = {
-    (newRepresentationHeaderFilename, newRepresentationKBFilename, newRepresentationKBFilename) = newRep.write(filename, writingFolder)
-  }
-
-  def getNewRepresentationFiles = {
-    newRepresentationKBFilename == null match {
-      case true => throw new Exception(s"LayerBuilder : new representation not written to files yet!")
-      case false => (newRepresentationHeaderFilename, newRepresentationDeclarationsFilename, newRepresentationKBFilename)
-    }
+    newRep.write(filename, writingFolder)
   }
 
   def mapFacts(factFilename: String, headerFile: String, predicateDeclarations: PredicateDeclarations) = {
