@@ -1,17 +1,17 @@
 package representationLearning
 
-import java.io.{BufferedWriter, File, FileWriter, PrintWriter}
+import java.io.PrintWriter
 
-import learners.ilp.ace.{TildeInduce, TildeNFold}
 import org.clapper.argot.ArgotParser
 import relationalClustering.bagComparison.bagCombination.{IntersectionCombination, UnionCombination}
 import relationalClustering.bagComparison.{ChiSquaredDistance, MaximumSimilarity, MinimumSimilarity, UnionBagSimilarity}
 import relationalClustering.clustering.evaluation.{AverageIntraClusterSimilarity, SilhouetteScore}
 import relationalClustering.clustering.{Hierarchical, Spectral}
 import relationalClustering.representation.domain.KnowledgeBase
-import relationalClustering.utils.{Helper, PredicateDeclarations, Settings}
+import relationalClustering.utils.{Helper, PredicateDeclarations}
 import representationLearning.clusterComparison.OverlapWithARI
 import representationLearning.clusterSelection.{IncreaseSaturationCut, ModelBasedSelection, PredefinedNumber}
+import representationLearning.layer.builder.LayerBuilder
 import representationLearning.layer.{AdaptiveSelectionLayer, DefinitionBasedLayer}
 
 /**
@@ -213,48 +213,11 @@ object LearnNewRepresentation {
         )
       }
 
-      val newRep = firstLayer.build()
-
-      val (headerH, declH, kbH) = newRep.write(outputName.value.getOrElse("newLayer"), rootFolder.value.getOrElse("./tmp"))
-      val newHeaderFile = new File(headerH)
-      val newDeclarationFile = new File(declH)
-      val newKBFile = new File(kbH)
-
-
-      //extract definitions of discovered predicates
-      if (extractDefinitions.value.getOrElse(false)) {
-        val latentPredicateDeclarations = new PredicateDeclarations(newDeclarationFile.getAbsolutePath)
-        val latentKB = new KnowledgeBase(Seq(newKBFile.getAbsolutePath),
-          Helper.readFile(newHeaderFile.getAbsolutePath).mkString("\n"),
-                                         latentPredicateDeclarations)
-
-        println("\n\n\n FOUND PREDICATES")
-        latentKB.getPredicateNames.map(latentKB.getPredicate).foreach( pred => {
-
-          val learner = defLearner.value.getOrElse("TildeInduce") match {
-            case "TildeInduce" => new TildeInduce(rootFolder.value.getOrElse("./tmp"), KnowledgeBase, latentKB, pred.getName, pred.getRole == Settings.ROLE_HYPEREDGE,
-                                                  sys.env.getOrElse("ACE_ILP_ROOT", "/home/seba/Software/ACE-ilProlog-1.2.20/linux"), tildeHeuristic.value.getOrElse("gain"),
-                                                  tildeMinCases.value.getOrElse(1))
-            case "TildeNFold" => new TildeNFold(rootFolder.value.getOrElse("./tmp"), KnowledgeBase, latentKB, pred.getName, pred.getRole == Settings.ROLE_HYPEREDGE,
-                                                sys.env.getOrElse("ACE_ILP_ROOT", "/home/seba/Software/ACE-ilProlog-1.2.20/linux"), nFold.value.getOrElse(10),
-                                                tildeHeuristic.value.getOrElse("gain"), tildeMinCases.value.getOrElse(1))
-          }
-
-          learner.fitModel()
-
-          println("*"*10)
-          learner.getDefinitions.foreach(pd => println(s"  ${pd.getAbsCoverage}(${pd.getRelCoverage}) ::  $pd"))
-          println("*"*10)
-
-        })
-      }
+      val layerBuilder = new LayerBuilder(firstLayer, rootFolder.value.getOrElse("./tmp"), linkage.value.getOrElse("average"))
+      val (latentHeader, latentDeclarations, latentKB) = layerBuilder.writeNewRepresentation(outputName.value.getOrElse("newLayer") + "1")
 
       if (newFacts.value.getOrElse("Nil") != "Nil") {
-        val latentKB = new KnowledgeBase(List(newFacts.value.get), Helper.readFile(head.value.get).mkString("\n"), predicateDeclarations)
-        val latentFacts = newRep.mapNewFacts(latentKB, linkage.value.getOrElse("average"))
-        val LKBOutput = new BufferedWriter(new FileWriter(s"${rootFolder.value.getOrElse("./tmp")}/${latentOutput.value.getOrElse(s"latent_representation.db")}"))
-        LKBOutput.write(latentFacts.toList.sorted.mkString(sys.props("line.separator")))
-        LKBOutput.close()
+        layerBuilder.mapAndWriteFacts(newFacts.value.get, head.value.get, predicateDeclarations, latentOutput.value.getOrElse(s"latent_representation.db"))
       }
     }
     catch {
