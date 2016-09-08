@@ -1,6 +1,6 @@
 package representationLearning.layer
 
-import java.io.{BufferedWriter, FileWriter}
+import java.io.{BufferedWriter, File, FileWriter}
 
 import relationalClustering.neighbourhood.NeighbourhoodGraph
 import relationalClustering.representation.clustering.Clustering
@@ -19,6 +19,10 @@ abstract class AbstractLayer(protected val rootFolder: String,
   protected val declarationsFile = new BufferedWriter(new FileWriter(s"$getRoot/$getOutputName.dcl"))
   protected val kbFile = new BufferedWriter(new FileWriter(s"$getRoot/$getOutputName.db"))
   protected val neighTreeCache = collection.mutable.Map[(String,String), NeighbourhoodGraph]()
+
+  if (!new File(getRoot).exists()) {
+    new File(getRoot).mkdirs()
+  }
 
 
   /** Adds a neighbourhood tree to the neighbourhood tree cache */
