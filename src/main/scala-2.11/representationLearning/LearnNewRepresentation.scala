@@ -1,6 +1,6 @@
 package representationLearning
 
-import java.io.PrintWriter
+import java.io.{File, PrintWriter}
 
 import org.clapper.argot.ArgotParser
 import relationalClustering.bagComparison.bagCombination.{IntersectionCombination, UnionCombination}
@@ -40,7 +40,7 @@ object LearnNewRepresentation {
   val maxNumberOfClusters = parser.option[Int](List("maxClusters"), "n", "maximal number of clusters to create, per domain")
   val selectionMethod = parser.option[String](List("selection"), "predefined|model|saturation|definition", "how to select the number of clusters per domain")
   val clusteringValidation = parser.option[String](List("clusterValidation"), "silhouette|intraClusterSimilarity", "cluster validation method")
-  val tradeOffFactor = parser.option[Double](List("saturationTradeOff"), "Double", "saturation trade off parameter: sim(i) >= w * sim(i+1) [default: 0.9]")
+  val tradeOffFactor = parser.option[String](List("saturationTradeOff"), "comma-separated list (per layer)", "saturation trade off parameter: sim(i) >= w * sim(i+1) [default: 0.9]")
   val outputName = parser.option[String](List("output"), "string", "name of the file to save new layer [default:newLayer.*]")
   val k = parser.option[Int](List("k"), "n", "desired number of clusters in 'predefined' selection method is used")
   val kPerDomain = parser.option[String](List("kDomain"), "comma-separated list of domain:numClusters", "number of clusters per domain")
@@ -55,6 +55,7 @@ object LearnNewRepresentation {
   val minimalCoverage = parser.option[Double](List("minimalCoverage"), "double", "minimal coverage for a definition to be considered as large-coverage (percentage)")
   val newFacts = parser.option[String](List("newKB"), "filename", "a knowledge base to be mapped to the latent representation")
   val latentOutput = parser.option[String](List("latentOutput"), "filename", "file to save a transformed [newKB] representation")
+  val numLayers = parser.option[Int](List("numLayers"), "n", "number of layers to create")
 
 
   def printParameters() = {
@@ -140,34 +141,124 @@ object LearnNewRepresentation {
       case "intersection" => new IntersectionCombination()
     }
 
-    // clustering algorithm
-    val clustering = algorithm.value.getOrElse("Spectral") match {
-      case "Spectral" =>
-        new Spectral(rootFolder.value.getOrElse("./tmp"))
-
-      case "Hierarchical" =>
-        new Hierarchical(linkage.value.getOrElse("average"), rootFolder.value.getOrElse("./tmp"))
-    }
-
-    //cluster validation
-    val clusterValidationMethod = clusteringValidation.value.getOrElse("intraClusterSimilarity") match {
-      case "silhouette" => new SilhouetteScore(rootFolder.value.getOrElse("./tmp"))
-      case "intraClusterSimilarity" => new AverageIntraClusterSimilarity()
-    }
-
-    val clusterSelector = selectionMethod.value.getOrElse("saturation") match {
-      case "predefined" => new PredefinedNumber(clusterPerDomain.head)
-      case "model" => new ModelBasedSelection(clusterValidationMethod)
-      case "saturation" => new IncreaseSaturationCut(clusterValidationMethod, tradeOffFactor.value.getOrElse(0.9))
-      case _ =>  new PredefinedNumber(clusterPerDomain.head)
-    }
-
-
-    val clusterOverlap = new OverlapWithARI(rootFolder.value.getOrElse("./tmp"))
-
     val parameterSets = weights.value.getOrElse("0.2,0.2,0.2,0.2,0.2").split(":").toList.map( par => par.split(",").toList.map( _.toDouble ))
+    val penalties = tradeOffFactor.value.getOrElse("0.1").contains(",") match {
+      case true => tradeOffFactor.value.get.split(",").toList.map( _.toDouble)
+      case false => List.fill(numLayers.value.getOrElse(1))(tradeOffFactor.value.get.toDouble)
+    }
 
-    try {
+    require(penalties.length == numLayers.value.getOrElse(1), s"number of penalties ($penalties) does not match number of layers ${numLayers.value.getOrElse(1)}")
+
+    var currentDeclarationsFile: String = declarationFile.value.get
+    var currentHeaderFile: String = head.value.get
+    var currentKnowledgeBasesFile: Seq[String] = dbs.value.get.split(",")
+
+    var currentTestFactsFile = newFacts.value.get
+
+    // build layer per layer
+    (1 to numLayers.value.getOrElse(1)).foreach( nl => {
+      val currentPredicateDeclarations = new PredicateDeclarations(currentDeclarationsFile)
+      val currentKnowledgeBase = new KnowledgeBase(currentKnowledgeBasesFile, Helper.readFile(currentHeaderFile).mkString("\n"), currentPredicateDeclarations)
+      val currentFolder = s"${rootFolder.value.getOrElse("./layer")}$nl"
+      val currentFileName = s"${outputName.value.getOrElse("layer")}$nl"
+
+      if (!new File(currentFolder).exists()) {
+        new File(currentFolder).mkdir()
+      }
+
+      // clustering algorithm
+      val clustering = algorithm.value.getOrElse("Spectral") match {
+        case "Spectral" =>
+          new Spectral(currentFolder)
+
+        case "Hierarchical" =>
+          new Hierarchical(linkage.value.getOrElse("average"), currentFolder)
+      }
+
+      //cluster validation
+      val clusterValidationMethod = clusteringValidation.value.getOrElse("intraClusterSimilarity") match {
+        case "silhouette" => new SilhouetteScore(currentFolder)
+        case "intraClusterSimilarity" => new AverageIntraClusterSimilarity()
+      }
+
+      // cluster selection method
+      val clusterSelector = selectionMethod.value.getOrElse("saturation") match {
+        case "predefined" => new PredefinedNumber(clusterPerDomain.head)
+        case "model" => new ModelBasedSelection(clusterValidationMethod)
+        case "saturation" => new IncreaseSaturationCut(clusterValidationMethod, penalties(nl-1))
+        case _ =>  new IncreaseSaturationCut(clusterValidationMethod, penalties(nl-1))
+      }
+
+      // measure for clustering overlap
+      val clusterOverlap = new OverlapWithARI(currentFolder)
+
+      try {
+
+        val firstLayer = selectionMethod.value.getOrElse("saturation") match {
+          case "definition" =>
+
+            val learnerDef = Map[String,String]("algorithm" -> defLearner.value.getOrElse("TildeInduce"),
+              "heuristic" -> tildeHeuristic.value.getOrElse("gain"),
+              "minCases" -> tildeMinCases.value.getOrElse(1).toString,
+              "ACE_ROOT" -> sys.env.getOrElse("ACE_ILP_ROOT", "/home/seba/Software/ACE-ilProlog-1.2.20/linux"))
+
+            new DefinitionBasedLayer(currentKnowledgeBase,
+                                    domainsToCluster,
+                                    depth.value.getOrElse(0),
+                                    maxNumberOfClusters.value.getOrElse(10),
+                                    similarity.value.getOrElse("RCNT"),
+                                    bagComparison,
+                                    bagCombinationMethod,
+                                    clustering,
+                                    minimalCoverage.value.getOrElse(0.1),
+                                    learnerDef,
+                                    parameterSets,
+                                    clusterOverlap,
+                                    overlapThreshold.value.getOrElse(0.3),
+                                    clusterEdges.value.getOrElse(false),
+                                    currentFileName,
+                                    currentFolder,
+                                    featureFormat.value.getOrElse(false))
+          case _ => new AdaptiveSelectionLayer(currentFolder,
+                                              currentFileName,
+                                              currentKnowledgeBase,
+                                              domainsToCluster,
+                                              depth.value.getOrElse(0),
+                                              bagComparison,
+                                              bagCombinationMethod,
+                                              similarity.value.getOrElse("RCNT"),
+                                              clustering,
+                                              clusterSelector,
+                                              clusterOverlap,
+                                              overlapThreshold.value.getOrElse(0.3),
+                                              maxNumberOfClusters.value.getOrElse(10),
+                                              parameterSets,
+                                              clusterEdges.value.getOrElse(false),
+                                              featureFormat.value.getOrElse(false)
+          )
+        }
+
+        val layerBuilder = new LayerBuilder(firstLayer, currentFolder, linkage.value.getOrElse("average"))
+        val (latentHeader, latentDeclarations, latentKB) = layerBuilder.writeNewRepresentation(currentFileName)
+
+        if (newFacts.value.getOrElse("Nil") != "Nil") {
+          layerBuilder.mapAndWriteFacts(currentTestFactsFile, currentHeaderFile, currentPredicateDeclarations, latentOutput.value.getOrElse(s"test-layer$nl.db"))
+        }
+
+        currentKnowledgeBasesFile = Seq(latentKB)
+        currentDeclarationsFile = latentDeclarations
+        currentHeaderFile = latentHeader
+        currentTestFactsFile = s"$currentFolder/${latentOutput.value.getOrElse(s"test-layer$nl.db")}"
+      }
+      catch {
+        case e: Exception => println(s"ERROR:layer$nl :: ${e.getMessage}\n \t ${e.getStackTrace}")
+          val writeError = new PrintWriter(s"$currentFolder/error.log")
+          e.printStackTrace(writeError)
+          writeError.close()
+      }
+    })
+
+    /*try {
 
       val firstLayer = selectionMethod.value.getOrElse("saturation") match {
         case "definition" =>
@@ -225,6 +316,6 @@ object LearnNewRepresentation {
         val writeError = new PrintWriter(s"${rootFolder.value.getOrElse("./tmp")}/error.log")
         e.printStackTrace(writeError)
         writeError.close()
-    }
+    }*/
   }
 }
