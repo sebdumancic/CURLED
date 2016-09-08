@@ -159,7 +159,11 @@ object LearnNewRepresentation {
     (1 to numLayers.value.getOrElse(1)).foreach( nl => {
       val currentPredicateDeclarations = new PredicateDeclarations(currentDeclarationsFile)
       val currentKnowledgeBase = new KnowledgeBase(currentKnowledgeBasesFile, Helper.readFile(currentHeaderFile).mkString("\n"), currentPredicateDeclarations)
-      val currentFolder = s"${rootFolder.value.getOrElse("./layer")}$nl"
+      val currentFolder = nl == 1 match {
+        case false => s"${rootFolder.value.getOrElse("./layer")}$nl"
+        case true => s"${rootFolder.value.getOrElse("./layer")}"
+      }
+
       val currentFileName = s"${outputName.value.getOrElse("layer")}$nl"
 
       if (!new File(currentFolder).exists()) {
