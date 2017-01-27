@@ -3,10 +3,11 @@ package representationLearning
 import java.io.{File, PrintWriter}
 
 import org.clapper.argot.ArgotParser
+import relationalClustering.aggregators._
 import relationalClustering.bagComparison.bagCombination.{IntersectionCombination, UnionCombination}
 import relationalClustering.bagComparison.{ChiSquaredDistance, MaximumSimilarity, MinimumSimilarity, UnionBagSimilarity}
+import relationalClustering.clustering.algo.{Hierarchical, Spectral}
 import relationalClustering.clustering.evaluation.{AverageIntraClusterSimilarity, SilhouetteScore}
-import relationalClustering.clustering.{Hierarchical, Spectral}
 import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.utils.{Helper, PredicateDeclarations}
 import representationLearning.clusterComparison.OverlapWithARI
@@ -56,6 +57,9 @@ object LearnNewRepresentation {
   val newFacts = parser.option[String](List("newKB"), "filename", "a knowledge base to be mapped to the latent representation")
   val latentOutput = parser.option[String](List("latentOutput"), "filename", "file to save a transformed [newKB] representation")
   val numLayers = parser.option[Int](List("numLayers"), "n", "number of layers to create")
+  val aggregatorFunctions = parser.option[String](List("aggregates"), "comma-separated list", "a list of aggregator functions to use for the numerical attributes [mean/min/max] ")
+  val edgeCombination = parser.option[String](List("vertexCombination"), "[avg|min|max]", "how to combine values of vertex similarities in hyperedge?")
+  val preserveOrder = parser.flag[Boolean](List("preserveVertexOrder"), "if set, preserves vertex order when clustering hyperedges")
 
 
   def printParameters() = {
@@ -141,6 +145,15 @@ object LearnNewRepresentation {
       case "intersection" => new IntersectionCombination()
     }
 
+    val agregates = aggregatorFunctions.value.getOrElse("mean").split(",").toList.foldLeft(List[AbstractAggregator]())( (acc, ag) => {
+      ag match {
+        case "mean" => acc :+ new AvgAggregator
+        case "min" => acc :+ new MinAggregator
+        case "max" => acc :+ new MaxAggregator
+        case "sum" => acc :+ new SumAggregator
+      }
+    })
+
     val parameterSets = weights.value.getOrElse("0.2,0.2,0.2,0.2,0.2").split(":").toList.map( par => par.split(",").toList.map( _.toDouble ))
     val penalties = tradeOffFactor.value.getOrElse("0.1").contains(",") match {
       case true => tradeOffFactor.value.get.split(",").toList.map( _.toDouble)
@@ -213,6 +226,9 @@ object LearnNewRepresentation {
                                     similarity.value.getOrElse("RCNT"),
                                     bagComparison,
                                     bagCombinationMethod,
+                                    agregates,
+                                    preserveOrder.value.getOrElse(false),
+                                    edgeCombination.value.getOrElse("avg"),
                                     clustering,
                                     minimalCoverage.value.getOrElse(0.1),
                                     learnerDef,
@@ -230,7 +246,9 @@ object LearnNewRepresentation {
                                               depth.value.getOrElse(0),
                                               bagComparison,
                                               bagCombinationMethod,
-                                              similarity.value.getOrElse("RCNT"),
+                                              agregates,
+                                              preserveOrder.value.getOrElse(false),
+                                              edgeCombination.value.getOrElse("avg"),
                                               clustering,
                                               clusterSelector,
                                               clusterOverlap,

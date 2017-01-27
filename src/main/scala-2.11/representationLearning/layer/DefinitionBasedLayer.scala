@@ -3,12 +3,13 @@ package representationLearning.layer
 import java.io.{BufferedWriter, FileWriter}
 
 import learners.ilp.ace.{TildeInduce, TildeNFold}
+import relationalClustering.aggregators.AbstractAggregator
 import relationalClustering.bagComparison.AbstractBagComparison
 import relationalClustering.bagComparison.bagCombination.AbstractBagCombine
-import relationalClustering.clustering.AbstractSKLearnCluster
+import relationalClustering.clustering.algo.AbstractSKLearnCluster
 import relationalClustering.representation.clustering.{Cluster, Clustering}
 import relationalClustering.representation.domain.KnowledgeBase
-import relationalClustering.similarity.{SimilarityNTv2, SimilarityNeighbourhoodTrees}
+import relationalClustering.similarity.{SimilarityNeighbourhoodTrees, SimilarityNeighbourhoodTreesOrdered}
 import relationalClustering.utils.{PredicateDeclarations, Settings}
 import representationLearning.clusterComparison.AbstractClusterOverlap
 import representationLearning.representation.ClusteringRepresentation
@@ -24,6 +25,9 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
                            protected val measureIdentifier: String,
                            protected val bagCompare: AbstractBagComparison,
                            protected val bagCombination: AbstractBagCombine,
+                           protected val aggregators: List[AbstractAggregator],
+                           protected val preserveVertexOrder: Boolean,
+                           protected val vertexCombination: String,
                            protected val clusteringAlg: AbstractSKLearnCluster,
                            protected val minimalCoverage: Double,
                            protected val definitionLearner: Map[String,String],
@@ -113,9 +117,9 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
   protected def clusterDomainWithParameters(dom: String, pars: List[Double], offset: Int) = {
     println(s"---- using parameters $pars")
 
-    val similarityMeasure = measureIdentifier match {
-      case "RCNT" => new SimilarityNeighbourhoodTrees(knowledgeBase, depth, pars, bagCompare, bagCombination, false)
-      case "RCNTv2" => new SimilarityNTv2(knowledgeBase, depth, pars, bagCompare, bagCombination, false)
+    val similarityMeasure = preserveVertexOrder match {
+      case false => new SimilarityNeighbourhoodTrees(knowledgeBase, depth, pars, bagCompare, bagCombination, aggregators, getNeighTreeCache)
+      case true => new SimilarityNeighbourhoodTreesOrdered(knowledgeBase, depth, pars, bagCompare, vertexCombination, aggregators, getNeighTreeCache)
     }
 
     val clusterEvals = (2 to getMaxClusters).map( numClust => {
@@ -172,9 +176,9 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
   protected def clusterHyperedgesWithParameters(domains: List[String], pars: List[Double], offset: Int) = {
     println(s"---- using parameters $pars")
 
-    val similarityMeasure = measureIdentifier match {
-      case "RCNT" => new SimilarityNeighbourhoodTrees(knowledgeBase, depth, pars, bagCompare, bagCombination, false)
-      case "RCNTv2" => new SimilarityNTv2(knowledgeBase, depth, pars, bagCompare, bagCombination, false)
+    val similarityMeasure = preserveVertexOrder match {
+      case false => new SimilarityNeighbourhoodTrees(knowledgeBase, depth, pars, bagCompare, bagCombination, aggregators, getNeighTreeCache)
+      case true => new SimilarityNeighbourhoodTreesOrdered(knowledgeBase, depth, pars, bagCompare, vertexCombination, aggregators, getNeighTreeCache)
     }
 
     val clusterEvals = (2 to getMaxClusters).map( numClust => {
@@ -249,7 +253,7 @@ class DefinitionBasedLayer(protected val knowledgeBase: KnowledgeBase,
     }
 
     closeFiles()
-    new ClusteringRepresentation(clusters)
+    new ClusteringRepresentation(clusters, preserveVertexOrder, aggregators, vertexCombination)
   }
 
 }

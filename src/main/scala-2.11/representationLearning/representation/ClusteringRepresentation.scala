@@ -2,17 +2,21 @@ package representationLearning.representation
 
 import java.io.{BufferedWriter, FileWriter}
 
+import relationalClustering.aggregators.AbstractAggregator
 import relationalClustering.bagComparison.ChiSquaredDistance
 import relationalClustering.bagComparison.bagCombination.UnionCombination
 import relationalClustering.neighbourhood.{NeighbourhoodGraph, NodeRepository}
 import relationalClustering.representation.clustering.Clustering
 import relationalClustering.representation.domain.KnowledgeBase
-import relationalClustering.similarity.SimilarityNeighbourhoodTrees
+import relationalClustering.similarity.{SimilarityNeighbourhoodTrees, SimilarityNeighbourhoodTreesOrdered}
 
 /**
   * Created by seb on 20.06.16.
   */
-class ClusteringRepresentation(protected val clusterings: Set[Clustering]) {
+class ClusteringRepresentation(protected val clusterings: Set[Clustering],
+                               protected val preserveOrder: Boolean,
+                               protected val aggregators: List[AbstractAggregator],
+                               protected val vertexCombination: String) {
 
   /** Writes new representation to files
     *
@@ -68,7 +72,12 @@ class ClusteringRepresentation(protected val clusterings: Set[Clustering]) {
     })
 
     // similarity measure just to extract hyperedges in a knowledge base
-    val tmpSimMsForEdges = new SimilarityNeighbourhoodTrees(kb, ntDepth, List(0.2,0.2,0.2,0.2,0.2), new ChiSquaredDistance(), new UnionCombination())
+    val tmpSimMsForEdges = if (!preserveOrder) {
+      new SimilarityNeighbourhoodTrees(kb, ntDepth, List(0.2,0.2,0.2,0.2,0.2), new ChiSquaredDistance(), new UnionCombination(), aggregators)
+    }
+    else {
+      new SimilarityNeighbourhoodTreesOrdered(kb, ntDepth, List(0.2,0.2,0.2,0.2,0.2), new ChiSquaredDistance(), vertexCombination, aggregators)
+    }
 
     // for each existing domain combination
     facts = facts ++ clusterings.filterNot(_.vertexClustering).map(_.getTypes).foldLeft(Set[String]())( (acc, comb) => {

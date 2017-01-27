@@ -1,8 +1,9 @@
 package representationLearning.layer
 
+import relationalClustering.aggregators.AbstractAggregator
 import relationalClustering.bagComparison.AbstractBagComparison
 import relationalClustering.bagComparison.bagCombination.AbstractBagCombine
-import relationalClustering.clustering.AbstractSKLearnCluster
+import relationalClustering.clustering.algo.AbstractSKLearnCluster
 import relationalClustering.clustering.evaluation.AbstractEvaluatorModel
 import relationalClustering.representation.domain.KnowledgeBase
 import representationLearning.clusterComparison.AbstractClusterOverlap
@@ -18,7 +19,9 @@ class MaxLayer(override protected val rootFolder: String,
                override protected val depth: Int,
                override protected val bagCompare: AbstractBagComparison,
                override protected val bagCombination: AbstractBagCombine,
-               override protected val measureIdentifier: String,
+               override protected val aggregators: List[AbstractAggregator],
+               override protected val preserveVertexOrder: Boolean,
+               override protected val vertexCombination: String,
                override protected val clusteringAlg: AbstractSKLearnCluster,
                protected val clusterEval: AbstractEvaluatorModel,
                override protected val clusterOverlap: AbstractClusterOverlap,
@@ -27,7 +30,7 @@ class MaxLayer(override protected val rootFolder: String,
                override protected val parameterList: List[List[Double]],
                override protected val doClusterHyperedges: Boolean,
                override protected val asFeature: Boolean) extends AdaptiveSelectionLayer(rootFolder, outputName, knowledgeBase, domainsToCluster, depth, bagCompare, bagCombination,
-                                                                                                 measureIdentifier, clusteringAlg, new ModelBasedSelection(clusterEval), clusterOverlap,
+                                                                                          aggregators, preserveVertexOrder, vertexCombination, clusteringAlg, new ModelBasedSelection(clusterEval), clusterOverlap,
                                                                                                  overlapThreshold, maxClusters, parameterList, doClusterHyperedges, asFeature) {
 
 }

@@ -1,11 +1,12 @@
 package representationLearning.layer
 
+import relationalClustering.aggregators.AbstractAggregator
 import relationalClustering.bagComparison.AbstractBagComparison
 import relationalClustering.bagComparison.bagCombination.AbstractBagCombine
-import relationalClustering.clustering.AbstractSKLearnCluster
+import relationalClustering.clustering.algo.AbstractSKLearnCluster
 import relationalClustering.representation.clustering.Clustering
 import relationalClustering.representation.domain.KnowledgeBase
-import relationalClustering.similarity.{SimilarityNTv2, SimilarityNeighbourhoodTrees}
+import relationalClustering.similarity.{SimilarityNeighbourhoodTrees, SimilarityNeighbourhoodTreesOrdered}
 import relationalClustering.utils.Settings
 import representationLearning.clusterComparison.AbstractClusterOverlap
 import representationLearning.clusterSelection.AbstractClusterSelection
@@ -22,7 +23,9 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
                              protected val depth: Int,
                              protected val bagCompare: AbstractBagComparison,
                              protected val bagCombination: AbstractBagCombine,
-                             protected val measureIdentifier: String,
+                             protected val aggregators: List[AbstractAggregator],
+                             protected val preserveVertexOrder: Boolean,
+                             protected val vertexCombination: String,
                              protected val clusteringAlg: AbstractSKLearnCluster,
                              protected val clusterSelect: AbstractClusterSelection,
                              protected val clusterOverlap: AbstractClusterOverlap,
@@ -55,9 +58,9 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
     parameterList.zipWithIndex.foreach(pars => {
       println(s"---- using parameters ${pars._1}")
 
-      val similarityMeasure = measureIdentifier match {
-        case "RCNT" => new SimilarityNeighbourhoodTrees(knowledgeBase, depth, pars._1, bagCompare, bagCombination, getNeighTreeCache)
-        case "RCNTv2" => new SimilarityNTv2(knowledgeBase, depth, pars._1, bagCompare, bagCombination, false)
+      val similarityMeasure = preserveVertexOrder match {
+        case false => new SimilarityNeighbourhoodTrees(knowledgeBase, depth, pars._1, bagCompare, bagCombination, aggregators, getNeighTreeCache)
+        case true => new SimilarityNeighbourhoodTreesOrdered(knowledgeBase, depth, pars._1, bagCompare, vertexCombination, aggregators, getNeighTreeCache)
       }
 
       var createdClusters = List[Clustering]()
@@ -105,9 +108,9 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
     parameterList.zipWithIndex.foreach(pars => {
       println(s"---- using parameters ${pars._1}")
 
-      val similarityMeasure = measureIdentifier match {
-        case "RCNT" => new SimilarityNeighbourhoodTrees(knowledgeBase, depth, pars._1, bagCompare, bagCombination, getNeighTreeCache)
-        case "RCNTv2" => new SimilarityNTv2(knowledgeBase, depth, pars._1, bagCompare, bagCombination, false)
+      val similarityMeasure = preserveVertexOrder match {
+        case false => new SimilarityNeighbourhoodTrees(knowledgeBase, depth, pars._1, bagCompare, bagCombination, aggregators, getNeighTreeCache)
+        case true => new SimilarityNeighbourhoodTreesOrdered(knowledgeBase, depth, pars._1, bagCompare, vertexCombination, aggregators, getNeighTreeCache)
       }
 
       var createdClusters = List[Clustering]()
@@ -161,6 +164,6 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
     }
 
     closeFiles()
-    new ClusteringRepresentation(clusters)
+    new ClusteringRepresentation(clusters, preserveVertexOrder, aggregators, vertexCombination)
   }
 }
