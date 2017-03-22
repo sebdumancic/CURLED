@@ -107,7 +107,7 @@ class ClusteringRepresentation(protected val clusterings: Set[Clustering],
     **/
   def mineDefinitions(minSupport: Double, maxDeviance: Double, folder: String): Unit = {
     clusterings.foreach(clustering => {
-      val writer = new BufferedWriter(new FileWriter(s"$folder/${clustering.getTypes.mkString("_")}-${clustering.getParameters.mkString(",")}"))
+      val writer = new BufferedWriter(new FileWriter(s"$folder/${clustering.getTypes.mkString("_")}-${clustering.getParameters.mkString(",")}.cluster.definitions"))
       val miner = new DefinitionMinerThreshold(clustering, minSupport, maxDeviance)
       val defs = miner.getDefinitions(clustering.getParameters)
 
