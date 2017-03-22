@@ -5,6 +5,7 @@ import java.io.{BufferedWriter, FileWriter}
 import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.utils.{Helper, PredicateDeclarations}
 import representationLearning.layer.AbstractLayer
+import representationLearning.representation.ClusteringRepresentation
 
 /**
   * Created by seb on 07.09.16.
@@ -13,10 +14,14 @@ class LayerBuilder(protected val definedLayer: AbstractLayer,
                    protected val writingFolder: String,
                    protected val linkage: String) {
 
-  protected val newRep = definedLayer.build()
+  protected val newRep: ClusteringRepresentation = definedLayer.build()
 
   def writeNewRepresentation(filename: String) = {
     newRep.write(filename, writingFolder)
+  }
+
+  def writeDefinitions(minSupport: Double, maxDeviance: Double): Unit = {
+    newRep.mineDefinitions(minSupport, maxDeviance, writingFolder)
   }
 
   def mapFacts(factFilename: String, headerFile: String, predicateDeclarations: PredicateDeclarations) = {

@@ -7,6 +7,7 @@ import relationalClustering.bagComparison.ChiSquaredDistance
 import relationalClustering.bagComparison.bagCombination.UnionCombination
 import relationalClustering.neighbourhood.{NeighbourhoodGraph, NodeRepository}
 import relationalClustering.representation.clustering.Clustering
+import relationalClustering.representation.definition.DefinitionMinerThreshold
 import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.similarity.{SimilarityNeighbourhoodTrees, SimilarityNeighbourhoodTreesOrdered}
 
@@ -96,6 +97,26 @@ class ClusteringRepresentation(protected val clusterings: Set[Clustering],
     })
 
     facts
+  }
+
+  /** Extracts the definitions of clusters, and saves them in the folders
+    *
+    * @param minSupport minimal support for DefinitionMinerThreshold
+    * @param maxDeviance maximal deviance for DefinitionMinerThreshold
+    * @param folder folder to save definitions in
+    **/
+  def mineDefinitions(minSupport: Double, maxDeviance: Double, folder: String): Unit = {
+    clusterings.foreach(clustering => {
+      val writer = new BufferedWriter(new FileWriter(s"$folder/${clustering.getTypes.mkString("_")}-${clustering.getParameters.mkString(",")}"))
+      val miner = new DefinitionMinerThreshold(clustering, minSupport, maxDeviance)
+      val defs = miner.getDefinitions(clustering.getParameters)
+
+      defs.foreach(clust => {
+        writer.write(s"${clust._1}\n\n${clust._2.map(_.toString()).mkString("\n\n")}\n${"*"*30}\n\n")
+      })
+
+      writer.close()
+    })
   }
 
 }

@@ -13,7 +13,7 @@ import relationalClustering.utils.{Helper, PredicateDeclarations}
 import representationLearning.clusterComparison.OverlapWithARI
 import representationLearning.clusterSelection.{IncreaseSaturationCut, ModelBasedSelection, PredefinedNumber}
 import representationLearning.layer.builder.LayerBuilder
-import representationLearning.layer.{AdaptiveSelectionLayer, DefinitionBasedLayer}
+import representationLearning.layer.{AdaptiveSelectionLayer, MaxLayer}
 
 /**
   * CLI implementing the functionality of learning new representation with
@@ -47,10 +47,8 @@ object LearnNewRepresentation {
   val kPerDomain = parser.option[String](List("kDomain"), "comma-separated list of domain:numClusters", "number of clusters per domain")
   val clusterEdges = parser.flag[Boolean](List("clusterHyperedges"), "should hyperedges be clusters as well (between the specified domains)")
   val extractDefinitions = parser.flag[Boolean](List("extractDefs"), "extract the definitions of new predicates")
-  val defLearner = parser.option[String](List("definitionLearner"), "TildeInduce|TildeNFold", "which learner to use for definition extraction")
-  val tildeHeuristic = parser.option[String](List("tildeHeuristic"), "gain|gainratio", "heuristics to use with TILDE [default: gain]")
-  val tildeMinCases = parser.option[Int](List("tildeMinCases"), "n", "minimal number of cases [default: 4]")
-  val nFold = parser.option[Int](List("numFolds"), "n", "number of folds for N-fold validation [default: 10]")
+  val definitionSupport = parser.option[Double](List("definitionSupport"), "double [0.9]", "minimal support for definition mining (% of objects in a cluster)")
+  val definitionDeviance = parser.option[Double](List("definitionDeviance"), "double [0.2]", "maximal deviance for definition mining (% of the mean value)")
   val overlapThreshold = parser.option[Double](List("overlapThreshold"), "Double [0.3]", "if overlap measure smaller than this threshold, a cluster is accepted as a new predicate")
   val featureFormat = parser.flag[Boolean](List("asFeature"), "should feature representation be used to store new representation")
   val minimalCoverage = parser.option[Double](List("minimalCoverage"), "double", "minimal coverage for a definition to be considered as large-coverage (percentage)")
@@ -86,16 +84,6 @@ object LearnNewRepresentation {
     println()
     if (extractDefinitions.value.getOrElse(false)) {
       println(s"---- learning definitions of new predicates: true")
-      println(s"---- extracting definitions with: ${defLearner.value.getOrElse("TildeInduce")}")
-      defLearner.value.getOrElse("TildeInduce") match {
-        case "TildeInduce" =>
-          println(s"---- tilde heuristics: ${tildeHeuristic.value.getOrElse("gain")}")
-          println(s"---- tilde minimal number of cases: ${tildeMinCases.value.getOrElse(1)}")
-        case "TildeNFold" =>
-          println(s"---- tilde heuristics: ${tildeHeuristic.value.getOrElse("gain")}")
-          println(s"---- tilde minimal number of cases: ${tildeMinCases.value.getOrElse(1)}")
-          println(s"---- number of folds: ${nFold.value.getOrElse(10)}")
-      }
     }
     println()
     println()
@@ -212,34 +200,7 @@ object LearnNewRepresentation {
       try {
 
         val firstLayer = selectionMethod.value.getOrElse("saturation") match {
-          case "definition" =>
-
-            val learnerDef = Map[String,String]("algorithm" -> defLearner.value.getOrElse("TildeInduce"),
-              "heuristic" -> tildeHeuristic.value.getOrElse("gain"),
-              "minCases" -> tildeMinCases.value.getOrElse(1).toString,
-              "ACE_ROOT" -> sys.env.getOrElse("ACE_ILP_ROOT", "/home/seba/Software/ACE-ilProlog-1.2.20/linux"))
-
-            new DefinitionBasedLayer(currentKnowledgeBase,
-                                    domainsToCluster,
-                                    depth.value.getOrElse(0),
-                                    maxNumberOfClusters.value.getOrElse(10),
-                                    similarity.value.getOrElse("RCNT"),
-                                    bagComparison,
-                                    bagCombinationMethod,
-                                    agregates,
-                                    preserveOrder.value.getOrElse(false),
-                                    edgeCombination.value.getOrElse("avg"),
-                                    clustering,
-                                    minimalCoverage.value.getOrElse(0.1),
-                                    learnerDef,
-                                    parameterSets,
-                                    clusterOverlap,
-                                    overlapThreshold.value.getOrElse(0.3),
-                                    clusterEdges.value.getOrElse(false),
-                                    currentFileName,
-                                    currentFolder,
-                                    featureFormat.value.getOrElse(false))
-          case _ => new AdaptiveSelectionLayer(currentFolder,
+          case "saturation" => new AdaptiveSelectionLayer(currentFolder,
                                               currentFileName,
                                               currentKnowledgeBase,
                                               domainsToCluster,
@@ -258,10 +219,32 @@ object LearnNewRepresentation {
                                               clusterEdges.value.getOrElse(false),
                                               featureFormat.value.getOrElse(false)
           )
+          case "model" => new MaxLayer(currentFolder,
+                                      currentFileName,
+                                      currentKnowledgeBase,
+                                      domainsToCluster,
+                                      depth.value.getOrElse(0),
+                                      bagComparison,
+                                      bagCombinationMethod,
+                                      agregates,
+                                      preserveOrder.value.getOrElse(false),
+                                      edgeCombination.value.getOrElse("avg"),
+                                      clustering,
+                                      clusterValidationMethod,
+                                      clusterOverlap,
+                                      overlapThreshold.value.getOrElse(0.3),
+                                      maxNumberOfClusters.value.getOrElse(10),
+                                      parameterSets,
+                                      clusterEdges.value.getOrElse(false),
+                                      featureFormat.value.getOrElse(false))
         }
 
         val layerBuilder = new LayerBuilder(firstLayer, currentFolder, linkage.value.getOrElse("average"))
         val (latentHeader, latentDeclarations, latentKB) = layerBuilder.writeNewRepresentation(currentFileName)
+
+        if (extractDefinitions.value.getOrElse(false)) {
+          layerBuilder.writeDefinitions(definitionSupport.value.getOrElse(0.9), definitionDeviance.value.getOrElse(0.2))
+        }
 
         if (newFacts.value.getOrElse("Nil") != "Nil") {
           layerBuilder.mapAndWriteFacts(currentTestFactsFile, currentHeaderFile, currentPredicateDeclarations, latentOutput.value.getOrElse(s"test-layer$nl.db"))
