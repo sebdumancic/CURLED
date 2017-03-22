@@ -112,7 +112,7 @@ class ClusteringRepresentation(protected val clusterings: Set[Clustering],
       val defs = miner.getDefinitions(clustering.getParameters)
 
       defs.foreach(clust => {
-        writer.write(s"${clust._1}\n\n${clust._2.map(_.toString()).mkString("\n\n")}\n${"*"*30}\n\n")
+        writer.write(s"${clust._1} (${clust._2.head.getTupleContexts.head.getNumObjects} entities)\n\n${clust._2.map(_.toString()).mkString("\n\n")}\n${"*"*30}\n\n")
       })
 
       writer.close()
