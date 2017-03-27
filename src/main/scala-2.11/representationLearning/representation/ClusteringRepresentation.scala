@@ -7,7 +7,7 @@ import relationalClustering.bagComparison.ChiSquaredDistance
 import relationalClustering.bagComparison.bagCombination.UnionCombination
 import relationalClustering.neighbourhood.{NeighbourhoodGraph, NodeRepository}
 import relationalClustering.representation.clustering.Clustering
-import relationalClustering.representation.definition.DefinitionMinerThreshold
+import relationalClustering.representation.definition.{DefinitionMinerThreshold, DefinitionMinerTopK}
 import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.similarity.{SimilarityNeighbourhoodTrees, SimilarityNeighbourhoodTreesOrdered}
 
@@ -99,7 +99,7 @@ class ClusteringRepresentation(protected val clusterings: Set[Clustering],
     facts
   }
 
-  /** Extracts the definitions of clusters, and saves them in the folders
+  /** Extracts the definitions of clusters by thresholding on tuple support, and saves them in the folders
     *
     * @param minSupport minimal support for DefinitionMinerThreshold
     * @param maxDeviance maximal deviance for DefinitionMinerThreshold
@@ -109,6 +109,31 @@ class ClusteringRepresentation(protected val clusterings: Set[Clustering],
     clusterings.foreach(clustering => {
       val writer = new BufferedWriter(new FileWriter(s"$folder/${clustering.getTypes.mkString("_")}-${clustering.getParameters.mkString(",")}.cluster.definitions"))
       val miner = new DefinitionMinerThreshold(clustering, minSupport, maxDeviance)
+      val defs = miner.getDefinitions(clustering.getParameters)
+
+      defs.foreach(clust => {
+        if (clust._2.nonEmpty) {
+          writer.write(s"${clust._1} (${clust._2.head.getTupleContexts.head.getNumObjects} entities)\n\n${clust._2.map(_.toString()).mkString("\n\n")}\n${"*"*30}\n\n")
+        }
+        else {
+          writer.write(s"${clust._1}\n\n \t NO DESCRIPTION!!!")
+        }
+
+      })
+
+      writer.close()
+    })
+  }
+
+  /** Extracts the definitions of clusters by extracting top K tuples, and saves them in the folders
+    *
+    * @param k minimal support for DefinitionMinerThreshold
+    * @param folder folder to save definitions in
+    **/
+  def mineDefinitions(k: Int, folder: String): Unit = {
+    clusterings.foreach(clustering => {
+      val writer = new BufferedWriter(new FileWriter(s"$folder/${clustering.getTypes.mkString("_")}-${clustering.getParameters.mkString(",")}.cluster.definitions"))
+      val miner = new DefinitionMinerTopK(clustering, k)
       val defs = miner.getDefinitions(clustering.getParameters)
 
       defs.foreach(clust => {
