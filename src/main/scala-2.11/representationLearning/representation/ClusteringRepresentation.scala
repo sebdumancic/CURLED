@@ -112,7 +112,13 @@ class ClusteringRepresentation(protected val clusterings: Set[Clustering],
       val defs = miner.getDefinitions(clustering.getParameters)
 
       defs.foreach(clust => {
-        writer.write(s"${clust._1} (${clust._2.head.getTupleContexts.head.getNumObjects} entities)\n\n${clust._2.map(_.toString()).mkString("\n\n")}\n${"*"*30}\n\n")
+        if (clust._2.nonEmpty) {
+          writer.write(s"${clust._1} (${clust._2.head.getTupleContexts.head.getNumObjects} entities)\n\n${clust._2.map(_.toString()).mkString("\n\n")}\n${"*"*30}\n\n")
+        }
+        else {
+          writer.write(s"${clust._1}\n\n \t NO DESCRIPTION!!!")
+        }
+
       })
 
       writer.close()
