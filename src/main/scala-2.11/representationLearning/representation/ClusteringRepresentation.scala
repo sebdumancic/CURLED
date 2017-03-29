@@ -150,4 +150,8 @@ class ClusteringRepresentation(protected val clusterings: Set[Clustering],
     })
   }
 
+  def getClusterings: Set[Clustering] = {
+    clusterings
+  }
+
 }
