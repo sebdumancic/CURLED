@@ -49,6 +49,7 @@ object LearnNewRepresentation {
   val extractDefinitions = parser.flag[Boolean](List("extractDefs"), "extract the definitions of new predicates")
   val definitionSupport = parser.option[Double](List("definitionSupport"), "double [0.9]", "minimal support for definition mining (% of objects in a cluster)")
   val definitionDeviance = parser.option[Double](List("definitionDeviance"), "double [0.2]", "maximal deviance for definition mining (% of the mean value)")
+  val definitionsK = parser.option[Int](List("definitionK"), "n", "number of tuples to extract for definition")
   val overlapThreshold = parser.option[Double](List("overlapThreshold"), "Double [0.3]", "if overlap measure smaller than this threshold, a cluster is accepted as a new predicate")
   val featureFormat = parser.flag[Boolean](List("asFeature"), "should feature representation be used to store new representation")
   val minimalCoverage = parser.option[Double](List("minimalCoverage"), "double", "minimal coverage for a definition to be considered as large-coverage (percentage)")
@@ -243,7 +244,12 @@ object LearnNewRepresentation {
         val (latentHeader, latentDeclarations, latentKB) = layerBuilder.writeNewRepresentation(currentFileName)
 
         if (extractDefinitions.value.getOrElse(false)) {
-          layerBuilder.writeDefinitions(definitionSupport.value.getOrElse(0.9), definitionDeviance.value.getOrElse(0.2))
+          if (definitionsK.value.getOrElse(0) > 0) {
+            layerBuilder.writeDefinitions(definitionsK.value.get)
+          }
+          else {
+            layerBuilder.writeDefinitions(definitionSupport.value.getOrElse(0.9), definitionDeviance.value.getOrElse(0.2))
+          }
         }
 
         if (newFacts.value.getOrElse("Nil") != "Nil") {

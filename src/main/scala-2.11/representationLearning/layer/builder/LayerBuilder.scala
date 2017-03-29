@@ -16,12 +16,20 @@ class LayerBuilder(protected val definedLayer: AbstractLayer,
 
   protected val newRep: ClusteringRepresentation = definedLayer.build()
 
-  def writeNewRepresentation(filename: String) = {
+  def writeNewRepresentation(filename: String): Unit = {
     newRep.write(filename, writingFolder)
+  }
+
+  def getClusteringRepresentation: ClusteringRepresentation = {
+    newRep
   }
 
   def writeDefinitions(minSupport: Double, maxDeviance: Double): Unit = {
     newRep.mineDefinitions(minSupport, maxDeviance, writingFolder)
+  }
+
+  def writeDefinitions(k: Int): Unit = {
+    newRep.mineDefinitions(k, writingFolder)
   }
 
   def mapFacts(factFilename: String, headerFile: String, predicateDeclarations: PredicateDeclarations) = {
