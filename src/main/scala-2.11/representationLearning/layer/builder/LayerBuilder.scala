@@ -16,7 +16,7 @@ class LayerBuilder(protected val definedLayer: AbstractLayer,
 
   protected val newRep: ClusteringRepresentation = definedLayer.build()
 
-  def writeNewRepresentation(filename: String): Unit = {
+  def writeNewRepresentation(filename: String): (String,String,String) = {
     newRep.write(filename, writingFolder)
   }
 
