@@ -7,9 +7,10 @@ import relationalClustering.aggregators._
 import relationalClustering.bagComparison.bagCombination.{IntersectionCombination, UnionCombination}
 import relationalClustering.bagComparison.{ChiSquaredDistance, MaximumSimilarity, MinimumSimilarity, UnionBagSimilarity}
 import relationalClustering.clustering.algo.{Hierarchical, Spectral}
-import relationalClustering.clustering.evaluation.{AverageIntraClusterSimilarity, SilhouetteScore}
+import relationalClustering.clustering.evaluation.{AverageIntraClusterSimilarity, LabelsContainer, SilhouetteScore}
 import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.utils.{Helper, PredicateDeclarations}
+import reports.RepresentationStats
 import representationLearning.clusterComparison.OverlapWithARI
 import representationLearning.clusterSelection.{IncreaseSaturationCut, ModelBasedSelection, PredefinedNumber}
 import representationLearning.layer.builder.LayerBuilder
@@ -59,6 +60,8 @@ object LearnNewRepresentation {
   val aggregatorFunctions = parser.option[String](List("aggregates"), "comma-separated list", "a list of aggregator functions to use for the numerical attributes [mean/min/max] ")
   val edgeCombination = parser.option[String](List("vertexCombination"), "[avg|min|max]", "how to combine values of vertex similarities in hyperedge?")
   val preserveOrder = parser.flag[Boolean](List("preserveVertexOrder"), "if set, preserves vertex order when clustering hyperedges")
+  val labels = parser.option[String](List("labels"), "fact labels", "comma-separated list of databases with labels")
+  val labelsDomain = parser.option[String](List("labelsDomain"), "string", "domain of objects with labels")
 
 
   def printParameters() = {
@@ -254,6 +257,15 @@ object LearnNewRepresentation {
 
         if (newFacts.value.getOrElse("Nil") != "Nil") {
           layerBuilder.mapAndWriteFacts(currentTestFactsFile, currentHeaderFile, currentPredicateDeclarations, latentOutput.value.getOrElse(s"test-layer$nl.db"))
+        }
+
+        if (labels.value.isDefined) {
+          val stats = new RepresentationStats(currentKnowledgeBase, layerBuilder.getClusteringRepresentation, new LabelsContainer(labels.value.get.split(",")), labelsDomain.value.get)
+          stats.generateReport(s"$currentFolder")
+        }
+        else {
+          val stats = new RepresentationStats(currentKnowledgeBase, layerBuilder.getClusteringRepresentation, null, "")
+          stats.generateReport(s"$currentFolder")
         }
 
         currentKnowledgeBasesFile = Seq(latentKB)
