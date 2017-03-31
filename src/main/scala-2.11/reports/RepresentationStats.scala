@@ -22,6 +22,9 @@ class RepresentationStats(protected val kb: KnowledgeBase,
     if (labelsContainer != null) {
       render(getPurity, "predicate", "purity", "representation", "class purity", s"$folder/classPurity.html")
     }
+
+    render(getOriginalPredicateInteraction, "predicate1", "predicate2", "interaction", "original predicate interaction", s"$folder/originalInteraction.html")
+    render(getLatentPredicateInteraction, "predicate1", "predicate2", "interaction", "latent predicate interaction", s"folder/latentInteraction.html")
   }
 
   protected def render(data: Seq[Map[String,Any]], axisX: String, axisY: String, color: String, name: String, filename: String): Unit = {
@@ -43,24 +46,22 @@ class RepresentationStats(protected val kb: KnowledgeBase,
 
   protected def getNumberOfTrueGroundings: Seq[Map[String,Any]] = {
 
-    val originalPreds = kb.getPredicateNames.map(kb.getPredicate).map(p => (p.getName, p.getTrueGroundings.size)).map(item => {
-      Map("predicate" -> item._1, "count" -> item._2, "representation" -> "original")
+    val originalPreds = kb.getPredicateNames.map(kb.getPredicate).map(p => (p.getName, p.getTrueGroundings.size, p.getDomains)).map(item => {
+      Map("predicate" -> item._1, "count" -> item._2, "representation" -> "original", "domains" -> item._3)
     })
-    val latentPreds = latentRepresentation.getClusterings.foldLeft(Map[String, Int]())((acc, cl) => {
-      acc ++ cl.getClusters.foldLeft(Map[String, Int]())((acc_i, p) => acc_i + (p.getClusterName -> p.getSize))}).toList.map(item => {
-      Map("predicate" -> item._1, "count" -> item._2, "representation" -> "latent")
-    })
+    val latentPreds = latentRepresentation.getClusterings.foldLeft(Seq[Map[String, Any]]())((acc, cl) => {
+      acc ++ cl.getClusters.map( p => {
+        Map("predicate" -> p.getClusterName, "count" -> p.getSize, "representation" -> "latent", "domains" -> p.getTypes)
+      })}).toList
 
     originalPreds ++ latentPreds
   }
 
   protected def getPurity: Seq[Map[String,Any]] = {
-    val originalPreds = kb.getPredicateNames.map(kb.getPredicate).map(p => (p.getName, getPredicatePurity(p )))map(item => {
-      Map("predicate" -> item._1, "purity" -> item._2, "representation" -> "original")
-    })
-    val latentPreds = latentRepresentation.getClusterings.foldLeft(Map[String, Double]())((acc, cl) => {
-      acc ++ cl.getClusters.foldLeft(Map[String, Double]())((acc_i, p) => acc_i + (p.getClusterName -> getClusterPurity(p)))
-    }).toList.map(item => Map("predicate" -> item._1, "purity" -> item._2, "representation" -> "latent"))
+    val originalPreds = kb.getPredicateNames.map(kb.getPredicate).map(p => Map("predicate" -> p.getName, "purity" -> getPredicatePurity(p), "representation" -> "original", "domains" -> p.getDomains))
+    val latentPreds = latentRepresentation.getClusterings.foldLeft(Seq[Map[String, Any]]())((acc, cl) => {
+      acc ++ cl.getClusters.map(p => Map("predicate" -> p.getClusterName, "purity" -> getClusterPurity(p), "representation" -> "latent", "domains" -> p.getTypes))
+    }).toList
 
     originalPreds ++ latentPreds
   }
