@@ -35,6 +35,10 @@ class RepresentationStats(protected val kb: KnowledgeBase,
     val fileWriter = new BufferedWriter(new FileWriter(filename))
     fileWriter.write(plot.html.pageHTML())
     fileWriter.close()
+
+    val jsonFile = new BufferedWriter(new FileWriter(s"$filename.json"))
+    jsonFile.write(plot.toJson)
+    jsonFile.close()
   }
 
   protected def getNumberOfTrueGroundings: Seq[Map[String,Any]] = {
