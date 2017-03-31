@@ -32,9 +32,9 @@ class RepresentationStats(protected val kb: KnowledgeBase,
     // TODO: add automatic detection of data type for Vegas
     val plot = Vegas(name).
       withData(data).
-      encodeX(axisX, Ord).
-      encodeY(axisY, Quant).
-      encodeColor(color, Nom).
+      encodeX(axisX).
+      encodeY(axisY).
+      encodeColor(color).
       mark(Bar)
 
     val fileWriter = new BufferedWriter(new FileWriter(filename))
