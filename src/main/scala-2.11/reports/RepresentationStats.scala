@@ -8,6 +8,7 @@ import relationalClustering.representation.domain.{KnowledgeBase, Predicate}
 import representationLearning.clusterComparison.OverlapWithARI
 import representationLearning.representation.ClusteringRepresentation
 import vegas._
+import vegas.spec.Spec
 
 /**
   * Created by seb on 29.03.17.
@@ -28,13 +29,22 @@ class RepresentationStats(protected val kb: KnowledgeBase,
     render(getLatentRedundancy(folder), "ARI", "reduction", "aspect", "redundancy reduction", s"$folder/latentRedundancy.html")
   }
 
+  protected def getVegasDataType(value: Any): Spec.Type = {
+    if (value.isInstanceOf[Double] || value.isInstanceOf[Int]) {
+      Quant
+    }
+    else {
+      Nom
+    }
+  }
+
   protected def render(data: Seq[Map[String,Any]], axisX: String, axisY: String, color: String, name: String, filename: String): Unit = {
     // TODO: add automatic detection of data type for Vegas
     val plot = Vegas(name).
       withData(data).
-      encodeX(axisX).
-      encodeY(axisY).
-      encodeColor(color).
+      encodeX(axisX, getVegasDataType(data.head(axisX))).
+      encodeY(axisY, getVegasDataType(data.head(axisY))).
+      encodeColor(color, getVegasDataType(data.head(color))).
       mark(Bar)
 
     val fileWriter = new BufferedWriter(new FileWriter(filename))
@@ -49,9 +59,9 @@ class RepresentationStats(protected val kb: KnowledgeBase,
   protected def render(data: Seq[Map[String,Any]], axisX: String, axisY: String, color: String, row: String, name: String, filename: String): Unit = {
     val plot = Vegas(name).
       withData(data).
-      encodeX(axisX, Ord).
-      encodeY(axisY, Quant).
-      encodeColor(color, Nom).
+      encodeX(axisX, getVegasDataType(data.head(axisX))).
+      encodeY(axisY, getVegasDataType(data.head(axisY))).
+      encodeColor(color, getVegasDataType(data.head(color))).
       encodeRow(row, Nom).
       mark(Bar)
 
