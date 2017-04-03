@@ -176,8 +176,8 @@ class RepresentationStats(protected val kb: KnowledgeBase,
 
   protected def getLatentRedundancy(folder: String): Seq[Map[String,Any]] = {
     val distinctTypes = latentRepresentation.getClusterings.map(_.getTypes)
-    val featureDenominator = latentRepresentation.getClusterings.map(_.getClusters.length).sum
-    val factDenominator = latentRepresentation.getClusterings.map(_.getClusters.map(_.getSize).sum).sum
+    val featureDenominator = latentRepresentation.getClusterings.foldLeft(0)((acc, cl) => acc + cl.getClusters.length).toDouble
+    val factDenominator = latentRepresentation.getClusterings.foldLeft(0)((acc, cl) => acc + cl.getClusters.foldLeft(0)((acc_i, p) => acc_i + p.getSize)).toDouble
     val comparator = new OverlapWithARI(folder)
 
     List(0.9, 0.8, 0.7, 0.6, 0.5).foldLeft(Seq[Map[String,Any]]())((acc, ari) => {
@@ -204,8 +204,8 @@ class RepresentationStats(protected val kb: KnowledgeBase,
         clusterings = clusterings ++ currentClusterings.filterNot(cl => rejected.contains(cl))
       })
 
-      acc ++ Seq(Map("ARI" -> ari, "reduction" -> clusterings.map(_.getClusters.length).sum.toDouble/featureDenominator, "aspect" -> "feature"),
-                 Map("ARI" -> ari, "reduction" -> clusterings.map(_.getClusters.map(_.getSize).sum).sum.toDouble/factDenominator, "aspect" -> "fact"))
+      acc ++ Seq(Map("ARI" -> ari, "reduction" -> clusterings.toSet.foldLeft(0)((acc, cl) => acc + cl.getClusters.length)/featureDenominator, "aspect" -> "feature"),
+                 Map("ARI" -> ari, "reduction" -> clusterings.toSet.foldLeft(0)((acc, cl) => acc + cl.getClusters.foldLeft(0)((acc_i, p) => acc_i + p.getSize))/factDenominator, "aspect" -> "fact"))
     })
   }
 
