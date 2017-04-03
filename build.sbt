@@ -19,9 +19,8 @@ libraryDependencies  ++= Seq(
   "org.scalanlp" %% "breeze-natives" % "0.11.2",
   // the visualization library is distributed separately as well.
   // It depends on LGPL code.
-  //"org.scalanlp" %% "breeze-viz" % "0.11.2",
-  //"com.github.wookietreiber" %% "scala-chart" % "latest.integration",
-  //"com.itextpdf" % "itextpdf" % "5.5.6"
+  "org.scalanlp" %% "breeze-viz" % "0.11.2",
+  //visualization
   "org.vegas-viz" %% "vegas" % "0.3.8"
 )
 
