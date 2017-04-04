@@ -1,6 +1,6 @@
 package representationLearning.representation
 
-import java.io.{BufferedWriter, FileWriter}
+import java.io.{BufferedWriter, File, FileWriter}
 
 import relationalClustering.aggregators.AbstractAggregator
 import relationalClustering.bagComparison.ChiSquaredDistance
@@ -10,6 +10,7 @@ import relationalClustering.representation.clustering.Clustering
 import relationalClustering.representation.definition.{DefinitionMinerThreshold, DefinitionMinerTopK}
 import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.similarity.{SimilarityNeighbourhoodTrees, SimilarityNeighbourhoodTreesOrdered}
+
 
 /**
   * Created by seb on 20.06.16.
@@ -51,7 +52,7 @@ class ClusteringRepresentation(protected val clusterings: Set[Clustering],
     * @param linkage linkage for assigning to the closest cluster (average, maximal, minimal)
     * @return a set of facts
     * */
-  def mapNewFacts(kb: KnowledgeBase, linkage: String = "maximal") = {
+  def mapNewFacts(kb: KnowledgeBase, linkage: String = "maximal"): Set[String] = {
     val ntDepth: Int = clusterings.head.getSimilarityMeasure.getDepth
     val nodeRepo = new NodeRepository(kb)
     val ntRepo = collection.mutable.Map[(String,String), NeighbourhoodGraph]()
@@ -106,22 +107,27 @@ class ClusteringRepresentation(protected val clusterings: Set[Clustering],
     * @param folder folder to save definitions in
     **/
   def mineDefinitions(minSupport: Double, maxDeviance: Double, folder: String): Unit = {
+    val basePath = s"$folder/definitions"
+    val directory = new File(basePath)
+    directory.mkdir()
+
     clusterings.foreach(clustering => {
-      val writer = new BufferedWriter(new FileWriter(s"$folder/${clustering.getTypes.mkString("_")}-${clustering.getParameters.mkString(",")}.cluster.definitions"))
+
       val miner = new DefinitionMinerThreshold(clustering, minSupport, maxDeviance)
       val defs = miner.getDefinitions(clustering.getParameters)
 
       defs.foreach(clust => {
+        val writer = new BufferedWriter(new FileWriter(s"$basePath/${clust._1}.cluster.definitions"))
         if (clust._2.nonEmpty) {
           writer.write(s"${clust._1} (${clust._2.head.getTupleContexts.head.getNumObjects} entities)\n\n${clust._2.map(_.toString()).mkString("\n\n")}\n${"*"*30}\n\n")
         }
         else {
           writer.write(s"${clust._1}\n\n \t NO DESCRIPTION!!!")
         }
-
+        writer.close()
       })
 
-      writer.close()
+
     })
   }
 
@@ -131,22 +137,26 @@ class ClusteringRepresentation(protected val clusterings: Set[Clustering],
     * @param folder folder to save definitions in
     **/
   def mineDefinitions(k: Int, folder: String): Unit = {
+    val basePath = s"$folder/definitions"
+    val directory = new File(basePath)
+    directory.mkdir()
+
     clusterings.foreach(clustering => {
-      val writer = new BufferedWriter(new FileWriter(s"$folder/${clustering.getTypes.mkString("_")}-${clustering.getParameters.mkString(",")}.cluster.definitions"))
       val miner = new DefinitionMinerTopK(clustering, k)
       val defs = miner.getDefinitions(clustering.getParameters)
 
       defs.foreach(clust => {
+        val writer = new BufferedWriter(new FileWriter(s"$basePath/${clust._1}.cluster.definitions"))
         if (clust._2.nonEmpty) {
           writer.write(s"${clust._1} (${clust._2.head.getTupleContexts.head.getNumObjects} entities)\n\n${clust._2.map(_.toString()).mkString("\n\n")}\n${"*"*30}\n\n")
         }
         else {
           writer.write(s"${clust._1}\n\n \t NO DESCRIPTION!!!")
         }
-
+        writer.close()
       })
 
-      writer.close()
+
     })
   }
 
