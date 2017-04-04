@@ -217,7 +217,7 @@ object LearnNewRepresentation {
                                               clustering,
                                               clusterSelector,
                                               clusterOverlap,
-                                              overlapThreshold.value.getOrElse(0.3),
+                                              overlapThreshold.value.getOrElse(1.0),
                                               maxNumberOfClusters.value.getOrElse(10),
                                               parameterSets,
                                               clusterEdges.value.getOrElse(false),
@@ -236,7 +236,7 @@ object LearnNewRepresentation {
                                       clustering,
                                       clusterValidationMethod,
                                       clusterOverlap,
-                                      overlapThreshold.value.getOrElse(0.3),
+                                      overlapThreshold.value.getOrElse(1.0),
                                       maxNumberOfClusters.value.getOrElse(10),
                                       parameterSets,
                                       clusterEdges.value.getOrElse(false),
@@ -247,12 +247,7 @@ object LearnNewRepresentation {
         val (latentHeader, latentDeclarations, latentKB) = layerBuilder.writeNewRepresentation(currentFileName)
 
         if (extractDefinitions.value.getOrElse(false)) {
-          if (definitionsK.value.getOrElse(0) > 0) {
-            layerBuilder.writeDefinitions(definitionsK.value.get)
-          }
-          else {
             layerBuilder.writeDefinitions(definitionSupport.value.getOrElse(0.9), definitionDeviance.value.getOrElse(0.2))
-          }
         }
 
         if (newFacts.value.getOrElse("Nil") != "Nil") {
