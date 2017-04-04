@@ -77,15 +77,15 @@ class RepresentationStats(protected val kb: KnowledgeBase,
   protected def getNumberOfTrueGroundings: Seq[Map[String,Any]] = {
 
     val originalPreds = kb.getPredicateNames.map(kb.getPredicate).map(p =>  {
-      val denominator = p.getDomainObjects.foldLeft(1)((acc, dom) => dom match {
+      val denominator = p.getDomainObjects.foldLeft(1.0)((acc, dom) => dom match {
         case x: NumericDomain => acc * 1
         case x: Domain => acc * x.getElements.size
-      }).toDouble/p.getDomains.zipWithIndex.foldLeft(0.0)((acc, elem) => acc*(elem._2 + 1))
+      })/p.getDomains.zipWithIndex.foldLeft(1.0)((acc, elem) => acc*(elem._2 + 1))
       Map("predicate" -> p.getName, "proportion" -> p.getTrueGroundings.size.toDouble/denominator, "count" -> p.getTrueGroundings.size, "representation" -> "original", "domains" -> p.getDomains)
     })
     val latentPreds = latentRepresentation.getClusterings.foldLeft(Seq[Map[String, Any]]())((acc, cl) => {
       acc ++ cl.getClusters.map( p => {
-        val denominator = p.getTypes.foldLeft(1)((acc, dom) => acc * kb.getDomain(dom).getElements.size).toDouble/p.getTypes.zipWithIndex.foldLeft(0.0)((acc, elem) => acc*(elem._2 + 1))
+        val denominator = p.getTypes.foldLeft(1.0)((acc, dom) => acc * kb.getDomain(dom).getElements.size)/p.getTypes.zipWithIndex.foldLeft(1.0)((acc, elem) => acc*(elem._2 + 1))
         Map("predicate" -> p.getClusterName, "proportion" -> p.getSize.toDouble/denominator, "count" -> p.getSize.toDouble, "representation" -> "latent", "domains" -> p.getTypes)
       })}).toList
 
@@ -94,14 +94,14 @@ class RepresentationStats(protected val kb: KnowledgeBase,
 
   protected def getPurity: Seq[Map[String,Any]] = {
     val originalPreds = kb.getPredicateNames.map(kb.getPredicate).map(p => {
-      val denominator = p.getDomainObjects.foldLeft(1)((acc, dom) => dom match {
+      val denominator = p.getDomainObjects.foldLeft(1.0)((acc, dom) => dom match {
         case x: NumericDomain => acc * 1
         case x: Domain => acc * x.getElements.size
-      }).toDouble/p.getDomains.zipWithIndex.foldLeft(0.0)((acc, elem) => acc*(elem._2 + 1))
+      })/p.getDomains.zipWithIndex.foldLeft(1.0)((acc, elem) => acc*(elem._2 + 1))
       Map("predicate" -> p.getName, "purity" -> getPredicatePurity(p), "representation" -> "original", "domains" -> p.getDomains, "proportion" -> p.getTrueGroundings.size.toDouble/denominator, "count" -> p.getTrueGroundings.size)
     })
     val latentPreds = latentRepresentation.getClusterings.foldLeft(Seq[Map[String, Any]]())((acc, cl) => {
-      val denominator = cl.getTypes.foldLeft(1)((acc, dom) => acc * kb.getDomain(dom).getElements.size).toDouble/cl.getTypes.zipWithIndex.foldLeft(0.0)((acc, elem) => acc*(elem._2 + 1))
+      val denominator = cl.getTypes.foldLeft(1.0)((acc, dom) => acc * kb.getDomain(dom).getElements.size)/cl.getTypes.zipWithIndex.foldLeft(1.0)((acc, elem) => acc*(elem._2 + 1))
       acc ++ cl.getClusters.map(p => Map("predicate" -> p.getClusterName, "purity" -> getClusterPurity(p), "representation" -> "latent", "domains" -> p.getTypes, "proportion" -> p.getSize.toDouble/denominator, "count" -> p.getSize))
     }).toList
 
