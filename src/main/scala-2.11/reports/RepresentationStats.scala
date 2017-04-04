@@ -80,12 +80,12 @@ class RepresentationStats(protected val kb: KnowledgeBase,
       val denominator = p.getDomainObjects.foldLeft(1)((acc, dom) => dom match {
         case x: NumericDomain => acc * 1
         case x: Domain => acc * x.getElements.size
-      })
+      }).toDouble/p.getDomains.zipWithIndex.foldLeft(0.0)((acc, elem) => acc*(elem._2 + 1))
       Map("predicate" -> p.getName, "count" -> p.getTrueGroundings.size.toDouble/denominator, "representation" -> "original", "domains" -> p.getDomains)
     })
     val latentPreds = latentRepresentation.getClusterings.foldLeft(Seq[Map[String, Any]]())((acc, cl) => {
       acc ++ cl.getClusters.map( p => {
-        val denominator = p.getTypes.foldLeft(1)((acc, dom) => acc * kb.getDomain(dom).getElements.size)
+        val denominator = p.getTypes.foldLeft(1)((acc, dom) => acc * kb.getDomain(dom).getElements.size).toDouble/p.getTypes.zipWithIndex.foldLeft(0.0)((acc, elem) => acc*(elem._2 + 1))
         Map("predicate" -> p.getClusterName, "count" -> p.getSize.toDouble/denominator, "representation" -> "latent", "domains" -> p.getTypes)
       })}).toList
 
