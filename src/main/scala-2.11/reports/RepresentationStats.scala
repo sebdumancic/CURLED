@@ -86,9 +86,9 @@ class RepresentationStats(protected val kb: KnowledgeBase,
   }
 
   protected def getPurity: Seq[Map[String,Any]] = {
-    val originalPreds = kb.getPredicateNames.map(kb.getPredicate).map(p => Map("predicate" -> p.getName, "purity" -> getPredicatePurity(p), "representation" -> "original", "domains" -> p.getDomains))
+    val originalPreds = kb.getPredicateNames.map(kb.getPredicate).map(p => Map("predicate" -> p.getName, "purity" -> getPredicatePurity(p), "representation" -> "original", "domains" -> p.getDomains, "instances" -> p.getTrueGroundings.size))
     val latentPreds = latentRepresentation.getClusterings.foldLeft(Seq[Map[String, Any]]())((acc, cl) => {
-      acc ++ cl.getClusters.map(p => Map("predicate" -> p.getClusterName, "purity" -> getClusterPurity(p), "representation" -> "latent", "domains" -> p.getTypes))
+      acc ++ cl.getClusters.map(p => Map("predicate" -> p.getClusterName, "purity" -> getClusterPurity(p), "representation" -> "latent", "domains" -> p.getTypes, "instances" -> p.getSize))
     }).toList
 
     originalPreds ++ latentPreds
