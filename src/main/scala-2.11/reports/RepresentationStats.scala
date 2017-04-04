@@ -4,7 +4,7 @@ import java.io.{BufferedWriter, FileWriter}
 
 import relationalClustering.clustering.evaluation.LabelsContainer
 import relationalClustering.representation.clustering.{Cluster, Clustering}
-import relationalClustering.representation.domain.{KnowledgeBase, Predicate}
+import relationalClustering.representation.domain.{Domain, KnowledgeBase, NumericDomain, Predicate}
 import representationLearning.clusterComparison.OverlapWithARI
 import representationLearning.representation.ClusteringRepresentation
 import vegas._
@@ -76,10 +76,17 @@ class RepresentationStats(protected val kb: KnowledgeBase,
 
   protected def getNumberOfTrueGroundings: Seq[Map[String,Any]] = {
 
-    val originalPreds = kb.getPredicateNames.map(kb.getPredicate).map(p =>  Map("predicate" -> p.getName, "count" -> p.getTrueGroundings.size, "representation" -> "original", "domains" -> p.getDomains))
+    val originalPreds = kb.getPredicateNames.map(kb.getPredicate).map(p =>  {
+      val denominator = p.getDomainObjects.foldLeft(1)((acc, dom) => dom match {
+        case x: NumericDomain => acc * 1
+        case x: Domain => acc * x.getElements.size
+      })
+      Map("predicate" -> p.getName, "count" -> p.getTrueGroundings.size.toDouble/denominator, "representation" -> "original", "domains" -> p.getDomains)
+    })
     val latentPreds = latentRepresentation.getClusterings.foldLeft(Seq[Map[String, Any]]())((acc, cl) => {
       acc ++ cl.getClusters.map( p => {
-        Map("predicate" -> p.getClusterName, "count" -> p.getSize, "representation" -> "latent", "domains" -> p.getTypes)
+        val denominator = p.getTypes.foldLeft(1)((acc, dom) => acc * kb.getDomain(dom).getElements.size)
+        Map("predicate" -> p.getClusterName, "count" -> p.getSize.toDouble/denominator, "representation" -> "latent", "domains" -> p.getTypes)
       })}).toList
 
     originalPreds ++ latentPreds
