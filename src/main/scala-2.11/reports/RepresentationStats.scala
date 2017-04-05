@@ -39,7 +39,6 @@ class RepresentationStats(protected val kb: KnowledgeBase,
   }
 
   protected def render(data: Seq[Map[String,Any]], axisX: String, axisY: String, color: String, name: String, filename: String): Unit = {
-    // TODO: add automatic detection of data type for Vegas
     val plot = Vegas(name).
       withData(data).
       encodeX(axisX, getVegasDataType(data.head(axisX))).
@@ -117,11 +116,11 @@ class RepresentationStats(protected val kb: KnowledgeBase,
         case x: Domain => acc * x.getElements.size
       })/p.getDomains.zipWithIndex.foldLeft(1.0)((acc, elem) => acc*(elem._2 + 1))
       Map("predicate" -> p.getName, "purity" -> getPredicateEntropy(p), "representation" -> "original", "domains" -> p.getDomains, "proportion" -> p.getTrueGroundings.size.toDouble/denominator, "count" -> p.getTrueGroundings.size)
-    })
+    }).filterNot(item => item("purity") == -1.0)
     val latentPreds = latentRepresentation.getClusterings.foldLeft(Seq[Map[String, Any]]())((acc, cl) => {
       val denominator = cl.getTypes.foldLeft(1.0)((acc, dom) => acc * kb.getDomain(dom).getElements.size)/cl.getTypes.zipWithIndex.foldLeft(1.0)((acc, elem) => acc*(elem._2 + 1))
       acc ++ cl.getClusters.map(p => Map("predicate" -> p.getClusterName, "purity" -> getClusterEntropy(p), "representation" -> "latent", "domains" -> p.getTypes, "proportion" -> p.getSize.toDouble/denominator, "count" -> p.getSize))
-    }).toList
+    }).toList.filterNot(item => item("purity") == -1.0)
 
     originalPreds ++ latentPreds
   }
