@@ -26,6 +26,7 @@ class RepresentationStats(protected val kb: KnowledgeBase,
     }
 
     render(getPredicateInteraction, "predicate1", "predicate2", "interaction", "predicate interaction", s"$folder/predicateInteraction.html", List(0.0, 1.0), List("white", "red"))
+    render(getPredicateInterConnectivity, "predicate1", "predicate2", "interaction", "predicate interaction", s"$folder/interactionStrength.html", List(0.0, 1.0), List("white", "red"))
     render(getLatentRedundancy(folder), "ARI", "reduction", "aspect", "redundancy reduction", s"$folder/latentRedundancy.html")
   }
 
@@ -155,6 +156,45 @@ class RepresentationStats(protected val kb: KnowledgeBase,
     getOriginalPredicateInteraction ++ getLatentPredicateInteraction
   }
 
+  protected def countPairwiseInteraction(p1: Seq[List[String]], p2: Seq[List[String]]): Double = {
+    var denominator = 0.0
+
+    (0 until p1.size - 1).foldLeft(0.0)((acc, p1ind) => {
+      acc + (p1ind until p2.size).foldLeft(0.0)((acc_i, p2ind) => {
+        val ground1 = p1(p1ind)
+        val ground2 = p2(p2ind)
+        denominator += 1.0
+
+        if (ground1.exists(elem => ground2.contains(elem))){
+          acc_i + 1
+        }
+        else {
+          acc_i
+        }
+      })
+    })/denominator
+  }
+
+  protected def countMatchedGroundings(p1: Seq[List[String]], p2: Seq[List[String]]): Double = {
+    val denominator = p1.length + p2.length
+
+    (p1.foldLeft(0.0)((acc, p1gr) => {
+      if (p2.exists(p2gr => p1gr.exists(elem => p2gr.contains(elem)))) {
+        acc + 1.0
+      }
+      else {
+        acc
+      }
+    }) + p2.foldLeft(0.0)((acc, p2gr) => {
+      if (p1.exists(p1gr => p2gr.exists(elem => p1gr.contains(elem)))) {
+        acc + 1
+      }
+      else {
+        acc
+      }
+    }))/denominator
+  }
+
   protected def getOriginalPredicateInteraction: Seq[Map[String,Any]] = {
     kb.getPredicateNames.map(kb.getPredicate).combinations(2).foldLeft(Map[(Predicate,Predicate), Double]())((acc, pComb) => {
       val p1 = pComb.head
@@ -165,17 +205,7 @@ class RepresentationStats(protected val kb: KnowledgeBase,
         acc + ((p1, p2) -> 0.0)
       }
       else{
-        acc + ( (p1, p2) -> p1.getTrueGroundings.foldLeft(0.0)((acc_1, p1gr) => {
-          acc_1 + p2.getTrueGroundings.foldLeft(0.0)((acc_2, p2gr) => {
-            denominator = denominator + 1
-            if (p1gr.exists(el => p2gr.contains(el))) {
-              acc_2 + 1.0
-            }
-            else {
-              acc_2
-            }
-          })
-        })/denominator)
+        acc + ( (p1, p2) -> countMatchedGroundings(p1.getTrueGroundings.toSeq, p2.getTrueGroundings.toSeq))
       }
     }).flatMap(item => Seq(Map("predicate1" -> item._1._1.getName, "predicate2" -> item._1._2.getName, "interaction" -> item._2, "representation" -> "original", "count1" -> item._1._1.getTrueGroundings.size, "count2" -> item._1._2.getTrueGroundings.size),
                            Map("predicate2" -> item._1._1.getName, "predicate1" -> item._1._2.getName, "interaction" -> item._2, "representation" -> "original", "count2" -> item._1._1.getTrueGroundings.size, "count1" -> item._1._2.getTrueGroundings.size))).toList
@@ -191,20 +221,46 @@ class RepresentationStats(protected val kb: KnowledgeBase,
         acc + ((cl1, cl2) -> 0.0)
       }
       else {
-        acc + ((cl1, cl2) -> cl1.getInstances.foldLeft(0.0)((acc_1, cl1gr) => {
-          acc_1 + cl2.getInstances.foldLeft(0.0)((acc_2, cl2gr) => {
-            denominator = denominator + 1
-            if (cl1gr.exists(el => cl2gr.contains(el))) {
-              acc_2 + 1.0
-            }
-            else {
-              acc_2
-            }
-          })
-        })/denominator)
+        acc + ((cl1, cl2) -> countMatchedGroundings(cl1.getInstances.toSeq, cl2.getInstances.toSeq))
       }
     }).toList.flatMap(item => Seq(Map("predicate1" -> item._1._1.getClusterName, "predicate2" -> item._1._2.getClusterName, "interaction" -> item._2, "representation" -> "latent", "count1" -> item._1._1.getSize, "count2" -> item._1._2.getSize),
                                   Map("predicate2" -> item._1._1.getClusterName, "predicate1" -> item._1._2.getClusterName, "interaction" -> item._2, "representation" -> "latent", "count2" -> item._1._1.getSize, "count1" -> item._1._2.getSize)))
+  }
+
+  protected def getPredicateInterConnectivity: Seq[Map[String,Any]] = {
+    getOriginalPredicateInterConnectivity ++ getLatentPredicateInterConnectivity
+  }
+
+  protected def getOriginalPredicateInterConnectivity: Seq[Map[String,Any]] = {
+    kb.getPredicateNames.map(kb.getPredicate).combinations(2).foldLeft(Map[(Predicate,Predicate), Double]())((acc, pComb) => {
+      val p1 = pComb.head
+      val p2 = pComb(1)
+      var denominator = 0
+
+      if (p1.getDomains.intersect(p2.getDomains).isEmpty) {
+        acc + ((p1, p2) -> 0.0)
+      }
+      else{
+        acc + ( (p1, p2) -> countPairwiseInteraction(p1.getTrueGroundings.toSeq, p2.getTrueGroundings.toSeq))
+      }
+    }).flatMap(item => Seq(Map("predicate1" -> item._1._1.getName, "predicate2" -> item._1._2.getName, "interaction" -> item._2, "representation" -> "original", "count1" -> item._1._1.getTrueGroundings.size, "count2" -> item._1._2.getTrueGroundings.size),
+      Map("predicate2" -> item._1._1.getName, "predicate1" -> item._1._2.getName, "interaction" -> item._2, "representation" -> "original", "count2" -> item._1._1.getTrueGroundings.size, "count1" -> item._1._2.getTrueGroundings.size))).toList
+  }
+
+  protected def getLatentPredicateInterConnectivity: Seq[Map[String,Any]] = {
+    latentRepresentation.getClusterings.foldLeft(List[Cluster]())((acc, clustrep) => acc ++ clustrep.getClusters).combinations(2).foldLeft(Map[(Cluster,Cluster), Double]())((acc, clComb) => {
+      val cl1 = clComb.head
+      val cl2 = clComb(1)
+      var denominator = 0
+
+      if (cl1.getTypes.intersect(cl2.getTypes).isEmpty) {
+        acc + ((cl1, cl2) -> 0.0)
+      }
+      else {
+        acc + ((cl1, cl2) -> countPairwiseInteraction(cl1.getInstances.toSeq, cl2.getInstances.toSeq))
+      }
+    }).toList.flatMap(item => Seq(Map("predicate1" -> item._1._1.getClusterName, "predicate2" -> item._1._2.getClusterName, "interaction" -> item._2, "representation" -> "latent", "count1" -> item._1._1.getSize, "count2" -> item._1._2.getSize),
+      Map("predicate2" -> item._1._1.getClusterName, "predicate1" -> item._1._2.getClusterName, "interaction" -> item._2, "representation" -> "latent", "count2" -> item._1._1.getSize, "count1" -> item._1._2.getSize)))
   }
 
   protected def getLatentRedundancy(folder: String): Seq[Map[String,Any]] = {
