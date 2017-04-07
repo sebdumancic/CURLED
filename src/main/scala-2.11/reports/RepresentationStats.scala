@@ -75,7 +75,6 @@ class RepresentationStats(protected val kb: KnowledgeBase,
   }
 
   protected def render(data: Seq[Map[String,Any]], axisX: String, axisY: String, color: String, name: String, filename: String, colorDomain: List[Double], colorRange: List[String]): Unit = {
-    // TODO: add automatic detection of data type for Vegas
     val plot = Vegas(name).
       withData(data).
       encodeX(axisX, getVegasDataType(data.head(axisX))).
@@ -199,7 +198,6 @@ class RepresentationStats(protected val kb: KnowledgeBase,
     kb.getPredicateNames.map(kb.getPredicate).combinations(2).foldLeft(Map[(Predicate,Predicate), Double]())((acc, pComb) => {
       val p1 = pComb.head
       val p2 = pComb(1)
-      var denominator = 0
 
       if (p1.getDomains.intersect(p2.getDomains).isEmpty) {
         acc + ((p1, p2) -> 0.0)
@@ -215,7 +213,6 @@ class RepresentationStats(protected val kb: KnowledgeBase,
     latentRepresentation.getClusterings.foldLeft(List[Cluster]())((acc, clustrep) => acc ++ clustrep.getClusters).combinations(2).foldLeft(Map[(Cluster,Cluster), Double]())((acc, clComb) => {
       val cl1 = clComb.head
       val cl2 = clComb(1)
-      var denominator = 0
 
       if (cl1.getTypes.intersect(cl2.getTypes).isEmpty) {
         acc + ((cl1, cl2) -> 0.0)
@@ -235,7 +232,6 @@ class RepresentationStats(protected val kb: KnowledgeBase,
     kb.getPredicateNames.map(kb.getPredicate).combinations(2).foldLeft(Map[(Predicate,Predicate), Double]())((acc, pComb) => {
       val p1 = pComb.head
       val p2 = pComb(1)
-      var denominator = 0
 
       if (p1.getDomains.intersect(p2.getDomains).isEmpty) {
         acc + ((p1, p2) -> 0.0)
@@ -251,7 +247,6 @@ class RepresentationStats(protected val kb: KnowledgeBase,
     latentRepresentation.getClusterings.foldLeft(List[Cluster]())((acc, clustrep) => acc ++ clustrep.getClusters).combinations(2).foldLeft(Map[(Cluster,Cluster), Double]())((acc, clComb) => {
       val cl1 = clComb.head
       val cl2 = clComb(1)
-      var denominator = 0
 
       if (cl1.getTypes.intersect(cl2.getTypes).isEmpty) {
         acc + ((cl1, cl2) -> 0.0)
