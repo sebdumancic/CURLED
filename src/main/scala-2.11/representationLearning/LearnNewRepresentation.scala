@@ -6,7 +6,7 @@ import org.clapper.argot.ArgotParser
 import relationalClustering.aggregators._
 import relationalClustering.bagComparison.bagCombination.{IntersectionCombination, UnionCombination}
 import relationalClustering.bagComparison.{ChiSquaredDistance, MaximumSimilarity, MinimumSimilarity, UnionBagSimilarity}
-import relationalClustering.clustering.algo.{Hierarchical, Spectral}
+import relationalClustering.clustering.algo.{Hierarchical, RandomClustering, Spectral}
 import relationalClustering.clustering.evaluation.{AverageIntraClusterSimilarity, LabelsContainer, SilhouetteScore}
 import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.utils.{Helper, PredicateDeclarations}
@@ -32,7 +32,7 @@ object LearnNewRepresentation {
   val depth = parser.option[Int](List("depth"), "n", "depth of the neighbourhood graph")
   val rootFolder = parser.option[String](List("root"), "filePath", "folder to place files in")
   val weights = parser.option[String](List("weights"), "Array[Double]", "semi-colon separated list of parameter sets; each set is a comma-separated list of 5 doubles [attributes,attribute distribution,connections,vertex neighbourhood, edge distribution]")
-  val algorithm = parser.option[String](List("algorithm"), "[Spectral|Hierarchical]", "algorithm to perform clustering")
+  val algorithm = parser.option[String](List("algorithm"), "[Spectral|Hierarchical|Random]", "algorithm to perform clustering")
   val similarity = parser.option[String](List("similarity"), "[RCNT|RCNTv2|HS|RIBL|HSAG]", "similarity measure")
   val bag = parser.option[String](List("bagSimilarity"), "[chiSquared|maximum|minimum|union]", "bag similarity measure")
   val bagCombination = parser.option[String](List("bagCombination"), "[union|intersection]", "bag combination method")
@@ -179,9 +179,10 @@ object LearnNewRepresentation {
       val clustering = algorithm.value.getOrElse("Spectral") match {
         case "Spectral" =>
           new Spectral(currentFolder)
-
         case "Hierarchical" =>
           new Hierarchical(linkage.value.getOrElse("average"), currentFolder)
+        case "Random" =>
+          new RandomClustering(currentFolder)
       }
 
       //cluster validation

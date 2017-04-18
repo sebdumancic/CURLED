@@ -3,7 +3,7 @@ package representationLearning.layer
 import relationalClustering.aggregators.AbstractAggregator
 import relationalClustering.bagComparison.AbstractBagComparison
 import relationalClustering.bagComparison.bagCombination.AbstractBagCombine
-import relationalClustering.clustering.algo.AbstractSKLearnCluster
+import relationalClustering.clustering.algo.AbstractCluster
 import relationalClustering.clustering.evaluation.AbstractEvaluatorModel
 import relationalClustering.representation.domain.KnowledgeBase
 import representationLearning.clusterComparison.AbstractClusterOverlap
@@ -22,7 +22,7 @@ class MaxLayer(override protected val rootFolder: String,
                override protected val aggregators: List[AbstractAggregator],
                override protected val preserveVertexOrder: Boolean,
                override protected val vertexCombination: String,
-               override protected val clusteringAlg: AbstractSKLearnCluster,
+               override protected val clusteringAlg: AbstractCluster,
                protected val clusterEval: AbstractEvaluatorModel,
                override protected val clusterOverlap: AbstractClusterOverlap,
                override protected val overlapThreshold: Double,

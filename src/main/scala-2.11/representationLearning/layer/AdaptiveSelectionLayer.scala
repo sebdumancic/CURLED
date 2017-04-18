@@ -3,7 +3,7 @@ package representationLearning.layer
 import relationalClustering.aggregators.AbstractAggregator
 import relationalClustering.bagComparison.AbstractBagComparison
 import relationalClustering.bagComparison.bagCombination.AbstractBagCombine
-import relationalClustering.clustering.algo.AbstractSKLearnCluster
+import relationalClustering.clustering.algo.AbstractCluster
 import relationalClustering.representation.clustering.Clustering
 import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.similarity.{SimilarityNeighbourhoodTrees, SimilarityNeighbourhoodTreesOrdered}
@@ -26,7 +26,7 @@ class AdaptiveSelectionLayer(override protected val rootFolder: String,
                              protected val aggregators: List[AbstractAggregator],
                              protected val preserveVertexOrder: Boolean,
                              protected val vertexCombination: String,
-                             protected val clusteringAlg: AbstractSKLearnCluster,
+                             protected val clusteringAlg: AbstractCluster,
                              protected val clusterSelect: AbstractClusterSelection,
                              protected val clusterOverlap: AbstractClusterOverlap,
                              protected val overlapThreshold: Double,
