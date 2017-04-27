@@ -22,12 +22,14 @@ class RepresentationStats(protected val kb: KnowledgeBase,
 
     render(getNumberOfTrueGroundings, "predicate", "count", "representation", "number of groundings", s"$folder/numberOfGroundings.html")
     if (labelsContainer != null) {
-      render(getEntropy, "predicate", "purity", "representation", "class purity", s"$folder/classEntropy.html")
+      render(getEntropy, "predicate", "purity", "representation", "class purity", s"$folder/labelEntropyInstance.html")
+      render(getEntropyJoined, "predicate", "purity", "representation", "class purity", s"$folder/labelEntropyJoined.html")
+      render(getPositionWiseEntropy, "position", "purity", "representation", "position-wise purity", s"$folder/labelEntropyRelations.html")
     }
 
     render(getPredicateInteraction, "predicate1", "predicate2", "interaction", "predicate interaction", s"$folder/predicateInteraction.html", List(0.0, 1.0), List("white", "red"))
     render(getPredicateInterConnectivity, "predicate1", "predicate2", "interaction", "predicate interaction", s"$folder/interactionStrength.html", List(0.0, 1.0), List("white", "red"))
-    render(getLatentRedundancy(folder), "ARI", "reduction", "aspect", "redundancy reduction", s"$folder/latentRedundancy.html")
+    //render(getLatentRedundancy(folder), "ARI", "reduction", "aspect", "redundancy reduction", s"$folder/latentRedundancy.html")
   }
 
   protected def getVegasDataType(value: Any): Spec.Type = {
@@ -110,14 +112,14 @@ class RepresentationStats(protected val kb: KnowledgeBase,
   }
 
   protected def getEntropy: Seq[Map[String,Any]] = {
-    val originalPreds = kb.getPredicateNames.map(kb.getPredicate).map(p => {
+    val originalPreds = kb.getPredicateNames.map(kb.getPredicate).filter(p => p.getDomains.length == 1).map(p => {
       val denominator = p.getDomainObjects.foldLeft(1.0)((acc, dom) => dom match {
         case x: NumericDomain => acc * 1
         case x: Domain => acc * x.getElements.size
       })/p.getDomains.zipWithIndex.foldLeft(1.0)((acc, elem) => acc*(elem._2 + 1))
       Map("predicate" -> p.getName, "purity" -> getPredicateEntropy(p), "representation" -> "original", "domains" -> p.getDomains, "proportion" -> p.getTrueGroundings.size.toDouble/denominator, "count" -> p.getTrueGroundings.size)
     }).filterNot(item => item("purity") == -1.0)
-    val latentPreds = latentRepresentation.getClusterings.foldLeft(Seq[Map[String, Any]]())((acc, cl) => {
+    val latentPreds = latentRepresentation.getClusterings.filter(p => p.getTypes.length == 1).foldLeft(Seq[Map[String, Any]]())((acc, cl) => {
       val denominator = cl.getTypes.foldLeft(1.0)((acc, dom) => acc * kb.getDomain(dom).getElements.size)/cl.getTypes.zipWithIndex.foldLeft(1.0)((acc, elem) => acc*(elem._2 + 1))
       acc ++ cl.getClusters.map(p => Map("predicate" -> p.getClusterName, "purity" -> getClusterEntropy(p), "representation" -> "latent", "domains" -> p.getTypes, "proportion" -> p.getSize.toDouble/denominator, "count" -> p.getSize))
     }).toList.filterNot(item => item("purity") == -1.0)
@@ -125,7 +127,64 @@ class RepresentationStats(protected val kb: KnowledgeBase,
     originalPreds ++ latentPreds
   }
 
-  protected def getPredicateEntropy(predicate: Predicate): Double = {
+  protected def getPositionWiseEntropy: Seq[Map[String,Any]] = {
+    val originalPres = kb.getPredicateNames.map(kb.getPredicate).filter(p => p.getDomains.length > 1).flatMap(p => {
+      p.getDomains.indices.foldLeft(Seq[Map[String,Any]]())((acc, pos) => {
+        acc :+ Map("predicate" -> p.getName, "purity" -> getPredicateEntropy(p, pos), "position" -> pos, "representation" -> "original", "count" -> p.getTrueGroundings.size)
+      })
+    }).filterNot(item => item("purity") == -1.0)
+    val latentPreds = latentRepresentation.getClusterings.filter(_.getTypes.length > 1).foldLeft(Seq[Map[String,Any]]())((acc, cl) => {
+      acc ++ cl.getClusters.flatMap(p => {
+        p.getTypes.indices.foldLeft(Seq[Map[String,Any]]())((acc_i, pos) => {
+          acc_i :+ Map("predicate" -> p.getClusterName, "purity" -> getClusterEntropy(p, pos), "position" -> pos, "representation" -> "latent", "count" -> p.getSize)
+        })
+      })
+    }).filterNot(item => item("purity") == -1.0)
+
+    originalPres ++ latentPreds
+  }
+
+  protected def getPredicateEntropy(predicate: Predicate, position: Int = 0): Double = {
+    if (predicate.getDomains(position) != domain) {
+      -1.0
+    }
+    else {
+      val labels = predicate.getTrueGroundings.toList.map(gr => gr(position)).map(gr => labelsContainer.getLabel(gr))
+      val labelProbs = labels.distinct.map(l => (l, labels.count(_ == l).toDouble/labels.length))
+      assert(!labelProbs.exists(_._2 > 1.0))
+      labelProbs.foldLeft(0.0)((acc, labp) => acc - (labp._2 * math.log10(labp._2)))
+    }
+  }
+
+  protected def getClusterEntropy(cluster: Cluster, position: Int = 0): Double = {
+    if (cluster.getTypes(position) != domain){
+      -1.0
+    }
+    else {
+      val labels = cluster.getInstances.toList.map(gr => gr(position)).map(gr =>labelsContainer.getLabel(gr))
+      val labelProbs = labels.distinct.map(l => (l, labels.count(_ == l).toDouble/labels.length))
+      assert(!labelProbs.exists(_._2 > 1.0))
+      labelProbs.foldLeft(0.0)((acc, labp) => acc - (labp._2 * math.log10(labp._2)))
+    }
+  }
+
+  protected def getEntropyJoined: Seq[Map[String,Any]] = {
+    val originalPreds = kb.getPredicateNames.map(kb.getPredicate).map(p => {
+      val denominator = p.getDomainObjects.foldLeft(1.0)((acc, dom) => dom match {
+        case x: NumericDomain => acc * 1
+        case x: Domain => acc * x.getElements.size
+      })/p.getDomains.zipWithIndex.foldLeft(1.0)((acc, elem) => acc*(elem._2 + 1))
+      Map("predicate" -> p.getName, "purity" -> getPredicateEntropyJoined(p), "representation" -> "original", "domains" -> p.getDomains, "proportion" -> p.getTrueGroundings.size.toDouble/denominator, "count" -> p.getTrueGroundings.size)
+    }).filterNot(item => item("purity") == -1.0)
+    val latentPreds = latentRepresentation.getClusterings.foldLeft(Seq[Map[String, Any]]())((acc, cl) => {
+      val denominator = cl.getTypes.foldLeft(1.0)((acc, dom) => acc * kb.getDomain(dom).getElements.size)/cl.getTypes.zipWithIndex.foldLeft(1.0)((acc, elem) => acc*(elem._2 + 1))
+      acc ++ cl.getClusters.map(p => Map("predicate" -> p.getClusterName, "purity" -> getClusterEntropyJoined(p), "representation" -> "latent", "domains" -> p.getTypes, "proportion" -> p.getSize.toDouble/denominator, "count" -> p.getSize))
+    }).toList.filterNot(item => item("purity") == -1.0)
+
+    originalPreds ++ latentPreds
+  }
+
+  protected def getPredicateEntropyJoined(predicate: Predicate): Double = {
     val matchingDomainsIds = predicate.getDomains.zipWithIndex.filter(_._1 == domain).map(_._2)
 
     if (matchingDomainsIds.isEmpty) {
@@ -134,11 +193,11 @@ class RepresentationStats(protected val kb: KnowledgeBase,
     else {
       val labels = predicate.getTrueGroundings.toList.map(gr => gr.zipWithIndex.filter(it => matchingDomainsIds.contains(it._2))).flatMap(gr => gr.map(it => labelsContainer.getLabel(it._1)))
       val labelProbs = labels.distinct.map(l => (l, labels.count(_ == l).toDouble/labels.length))
-      labelProbs.foldLeft(0.0)((acc, labp) => acc - labp._2 * math.log(labp._2))
+      labelProbs.foldLeft(0.0)((acc, labp) => acc - (labp._2 * math.log10(labp._2)))
     }
   }
 
-  protected def getClusterEntropy(cluster: Cluster): Double = {
+  protected def getClusterEntropyJoined(cluster: Cluster): Double = {
     val matchingDomainIds = cluster.getTypes.zipWithIndex.filter(_._1 == domain).map(_._2)
 
     if (matchingDomainIds.isEmpty) {
@@ -147,7 +206,7 @@ class RepresentationStats(protected val kb: KnowledgeBase,
     else {
       val labels = cluster.getInstances.toList.map(gr => gr.zipWithIndex.filter(it => matchingDomainIds.contains(it._2))).flatMap(gr => gr.map(it => labelsContainer.getLabel(it._1)))
       val labelProbs = labels.distinct.map(l => (l, labels.count(_ == l).toDouble/labels.length))
-      labelProbs.foldLeft(0.0)((acc, labp) => acc - labp._2 * math.log(labp._2))
+      labelProbs.foldLeft(0.0)((acc, labp) => acc - (labp._2 * math.log10(labp._2)))
     }
   }
 
@@ -200,13 +259,12 @@ class RepresentationStats(protected val kb: KnowledgeBase,
       val p2 = pComb(1)
 
       if (p1.getDomains.intersect(p2.getDomains).isEmpty) {
-        acc + ((p1, p2) -> 0.0)
+        acc
       }
       else{
         acc + ( (p1, p2) -> countMatchedGroundings(p1.getTrueGroundings.toSeq, p2.getTrueGroundings.toSeq))
       }
-    }).flatMap(item => Seq(Map("predicate1" -> item._1._1.getName, "predicate2" -> item._1._2.getName, "interaction" -> item._2, "representation" -> "original", "count1" -> item._1._1.getTrueGroundings.size, "count2" -> item._1._2.getTrueGroundings.size),
-                           Map("predicate2" -> item._1._1.getName, "predicate1" -> item._1._2.getName, "interaction" -> item._2, "representation" -> "original", "count2" -> item._1._1.getTrueGroundings.size, "count1" -> item._1._2.getTrueGroundings.size))).toList
+    }).flatMap(item => Seq(Map("predicate1" -> item._1._1.getName, "predicate2" -> item._1._2.getName, "interaction" -> item._2, "representation" -> "original", "count1" -> item._1._1.getTrueGroundings.size, "count2" -> item._1._2.getTrueGroundings.size))).toList
   }
 
   protected def getLatentPredicateInteraction: Seq[Map[String,Any]] = {
@@ -215,13 +273,12 @@ class RepresentationStats(protected val kb: KnowledgeBase,
       val cl2 = clComb(1)
 
       if (cl1.getTypes.intersect(cl2.getTypes).isEmpty) {
-        acc + ((cl1, cl2) -> 0.0)
+        acc
       }
       else {
         acc + ((cl1, cl2) -> countMatchedGroundings(cl1.getInstances.toSeq, cl2.getInstances.toSeq))
       }
-    }).toList.flatMap(item => Seq(Map("predicate1" -> item._1._1.getClusterName, "predicate2" -> item._1._2.getClusterName, "interaction" -> item._2, "representation" -> "latent", "count1" -> item._1._1.getSize, "count2" -> item._1._2.getSize),
-                                  Map("predicate2" -> item._1._1.getClusterName, "predicate1" -> item._1._2.getClusterName, "interaction" -> item._2, "representation" -> "latent", "count2" -> item._1._1.getSize, "count1" -> item._1._2.getSize)))
+    }).toList.flatMap(item => Seq(Map("predicate1" -> item._1._1.getClusterName, "predicate2" -> item._1._2.getClusterName, "interaction" -> item._2, "representation" -> "latent", "count1" -> item._1._1.getSize, "count2" -> item._1._2.getSize)))
   }
 
   protected def getPredicateInterConnectivity: Seq[Map[String,Any]] = {
@@ -234,13 +291,12 @@ class RepresentationStats(protected val kb: KnowledgeBase,
       val p2 = pComb(1)
 
       if (p1.getDomains.intersect(p2.getDomains).isEmpty) {
-        acc + ((p1, p2) -> 0.0)
+        acc
       }
       else{
         acc + ( (p1, p2) -> countPairwiseInteraction(p1.getTrueGroundings.toSeq, p2.getTrueGroundings.toSeq))
       }
-    }).flatMap(item => Seq(Map("predicate1" -> item._1._1.getName, "predicate2" -> item._1._2.getName, "interaction" -> item._2, "representation" -> "original", "count1" -> item._1._1.getTrueGroundings.size, "count2" -> item._1._2.getTrueGroundings.size),
-      Map("predicate2" -> item._1._1.getName, "predicate1" -> item._1._2.getName, "interaction" -> item._2, "representation" -> "original", "count2" -> item._1._1.getTrueGroundings.size, "count1" -> item._1._2.getTrueGroundings.size))).toList
+    }).flatMap(item => Seq(Map("predicate1" -> item._1._1.getName, "predicate2" -> item._1._2.getName, "interaction" -> item._2, "representation" -> "original", "count1" -> item._1._1.getTrueGroundings.size, "count2" -> item._1._2.getTrueGroundings.size))).toList
   }
 
   protected def getLatentPredicateInterConnectivity: Seq[Map[String,Any]] = {
@@ -249,13 +305,12 @@ class RepresentationStats(protected val kb: KnowledgeBase,
       val cl2 = clComb(1)
 
       if (cl1.getTypes.intersect(cl2.getTypes).isEmpty) {
-        acc + ((cl1, cl2) -> 0.0)
+        acc
       }
       else {
         acc + ((cl1, cl2) -> countPairwiseInteraction(cl1.getInstances.toSeq, cl2.getInstances.toSeq))
       }
-    }).toList.flatMap(item => Seq(Map("predicate1" -> item._1._1.getClusterName, "predicate2" -> item._1._2.getClusterName, "interaction" -> item._2, "representation" -> "latent", "count1" -> item._1._1.getSize, "count2" -> item._1._2.getSize),
-      Map("predicate2" -> item._1._1.getClusterName, "predicate1" -> item._1._2.getClusterName, "interaction" -> item._2, "representation" -> "latent", "count2" -> item._1._1.getSize, "count1" -> item._1._2.getSize)))
+    }).toList.flatMap(item => Seq(Map("predicate1" -> item._1._1.getClusterName, "predicate2" -> item._1._2.getClusterName, "interaction" -> item._2, "representation" -> "latent", "count1" -> item._1._1.getSize, "count2" -> item._1._2.getSize)))
   }
 
   protected def getLatentRedundancy(folder: String): Seq[Map[String,Any]] = {
