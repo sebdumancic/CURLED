@@ -5,6 +5,7 @@ import java.io.{BufferedWriter, FileWriter}
 import relationalClustering.clustering.evaluation.LabelsContainer
 import relationalClustering.representation.clustering.{Cluster, Clustering}
 import relationalClustering.representation.domain.{Domain, KnowledgeBase, NumericDomain, Predicate}
+import relationalClustering.utils.Settings
 import representationLearning.clusterComparison.OverlapWithARI
 import representationLearning.representation.ClusteringRepresentation
 import vegas._
@@ -112,7 +113,7 @@ class RepresentationStats(protected val kb: KnowledgeBase,
   }
 
   protected def getEntropy: Seq[Map[String,Any]] = {
-    val originalPreds = kb.getPredicateNames.map(kb.getPredicate).filter(p => p.getDomains.length == 1).map(p => {
+    val originalPreds = kb.getPredicateNames.map(kb.getPredicate).filter(p => Set(Settings.ROLE_NUMERIC_ATTRIBUTE, Settings.ROLE_ATTRIBUTE, Settings.ROLE_ANNOTATION).contains(p.getRole)).map(p => {
       val denominator = p.getDomainObjects.foldLeft(1.0)((acc, dom) => dom match {
         case x: NumericDomain => acc * 1
         case x: Domain => acc * x.getElements.size
@@ -128,7 +129,7 @@ class RepresentationStats(protected val kb: KnowledgeBase,
   }
 
   protected def getPositionWiseEntropy: Seq[Map[String,Any]] = {
-    val originalPres = kb.getPredicateNames.map(kb.getPredicate).filter(p => p.getDomains.length > 1).flatMap(p => {
+    val originalPres = kb.getPredicateNames.map(kb.getPredicate).filter(p => p.getRole == Settings.ROLE_HYPEREDGE).flatMap(p => {
       p.getDomains.indices.foldLeft(Seq[Map[String,Any]]())((acc, pos) => {
         acc :+ Map("predicate" -> p.getName, "purity" -> getPredicateEntropy(p, pos), "position" -> pos, "representation" -> "original", "count" -> p.getTrueGroundings.size)
       })
