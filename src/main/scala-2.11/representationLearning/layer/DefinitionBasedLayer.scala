@@ -4,8 +4,8 @@ import java.io.{BufferedWriter, FileWriter}
 
 import learners.ilp.ace.{TildeInduce, TildeNFold}
 import relationalClustering.aggregators.AbstractAggregator
-import relationalClustering.bagComparison.AbstractBagComparison
-import relationalClustering.bagComparison.bagCombination.AbstractBagCombine
+import relationalClustering.bags.bagCombination.AbstractBagCombine
+import relationalClustering.bags.bagComparison.AbstractBagComparison
 import relationalClustering.clustering.algo.AbstractSKLearnCluster
 import relationalClustering.representation.clustering.{Cluster, Clustering}
 import relationalClustering.representation.domain.KnowledgeBase

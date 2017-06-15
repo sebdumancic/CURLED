@@ -3,9 +3,9 @@ package representationLearning.representation
 import java.io.{BufferedWriter, File, FileWriter}
 
 import relationalClustering.aggregators.AbstractAggregator
-import relationalClustering.bagComparison.ChiSquaredDistance
-import relationalClustering.bagComparison.bagCombination.UnionCombination
-import relationalClustering.neighbourhood.{NeighbourhoodGraph, NodeRepository}
+import relationalClustering.bags.bagCombination.UnionCombination
+import relationalClustering.bags.bagComparison.ChiSquaredDistance
+import relationalClustering.neighbourhood.{NeighbourhoodTree, NodeRepository}
 import relationalClustering.representation.clustering.Clustering
 import relationalClustering.representation.definition.{DefinitionMinerThreshold, DefinitionMinerTopK}
 import relationalClustering.representation.domain.KnowledgeBase
@@ -55,13 +55,13 @@ class ClusteringRepresentation(protected val clusterings: Set[Clustering],
   def mapNewFacts(kb: KnowledgeBase, linkage: String = "maximal"): Set[String] = {
     val ntDepth: Int = clusterings.head.getSimilarityMeasure.getDepth
     val nodeRepo = new NodeRepository(kb)
-    val ntRepo = collection.mutable.Map[(String,String), NeighbourhoodGraph]()
+    val ntRepo = collection.mutable.Map[(String,String), NeighbourhoodTree]()
 
     //assign vertices to clusters - over all domains in clustering
     var facts = clusterings.filter(_.vertexClustering).map(_.getTypes.head).map(d => kb.getDomain(d)).foldLeft(Set[String]())( (acc, dom) => {
       // over all elements of a domain
       acc ++ dom.getElements.foldLeft(Set[String]())( (acc_i, elem) => {
-        val elemNT = new NeighbourhoodGraph(elem, dom.getName, ntDepth, kb, nodeRepo)
+        val elemNT = new NeighbourhoodTree(elem, dom.getName, ntDepth, kb, nodeRepo)
         ntRepo((elem, dom.getName)) = elemNT
 
         // over all clusterings of the same type

@@ -2,7 +2,7 @@ package representationLearning.clusterComparison
 
 import java.io.{BufferedWriter, File, FileWriter}
 
-import relationalClustering.clustering.evaluation.{AdjustedRandIndex, LabelsContainer}
+import relationalClustering.clustering.evaluation.supervised.{AdjustedRandIndex, LabelsContainer}
 import relationalClustering.representation.clustering.Clustering
 
 /**

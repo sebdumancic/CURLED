@@ -1,8 +1,8 @@
 package representationLearning.layer
 
 import relationalClustering.aggregators.AbstractAggregator
-import relationalClustering.bagComparison.AbstractBagComparison
-import relationalClustering.bagComparison.bagCombination.AbstractBagCombine
+import relationalClustering.bags.bagCombination.AbstractBagCombine
+import relationalClustering.bags.bagComparison.AbstractBagComparison
 import relationalClustering.clustering.algo.AbstractCluster
 import relationalClustering.representation.clustering.Clustering
 import relationalClustering.representation.domain.KnowledgeBase

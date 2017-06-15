@@ -1,6 +1,6 @@
 package representationLearning.clusterSelection
 
-import relationalClustering.clustering.evaluation.AbstractEvaluatorModel
+import relationalClustering.clustering.evaluation.unsupervised.AbstractEvaluatorModel
 import relationalClustering.representation.clustering.Clustering
 
 /**

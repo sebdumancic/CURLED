@@ -4,10 +4,11 @@ import java.io.{File, PrintWriter}
 
 import org.clapper.argot.ArgotParser
 import relationalClustering.aggregators._
-import relationalClustering.bagComparison.bagCombination.{IntersectionCombination, UnionCombination}
-import relationalClustering.bagComparison.{ChiSquaredDistance, MaximumSimilarity, MinimumSimilarity, UnionBagSimilarity}
+import relationalClustering.bags.bagCombination.{IntersectionCombination, UnionCombination}
+import relationalClustering.bags.bagComparison.{ChiSquaredDistance, MaximumSimilarity, MinimumSimilarity, UnionBagSimilarity}
 import relationalClustering.clustering.algo.{Hierarchical, RandomClustering, Spectral}
-import relationalClustering.clustering.evaluation.{AverageIntraClusterSimilarity, LabelsContainer, SilhouetteScore}
+import relationalClustering.clustering.evaluation.supervised.LabelsContainer
+import relationalClustering.clustering.evaluation.unsupervised.{AverageIntraClusterSimilarity, SilhouetteScore}
 import relationalClustering.representation.domain.KnowledgeBase
 import relationalClustering.utils.{Helper, PredicateDeclarations}
 import reports.RepresentationStats

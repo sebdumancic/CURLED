@@ -2,7 +2,7 @@ package reports
 
 import java.io.{BufferedWriter, FileWriter}
 
-import relationalClustering.clustering.evaluation.LabelsContainer
+import relationalClustering.clustering.evaluation.supervised.LabelsContainer
 import relationalClustering.representation.clustering.{Cluster, Clustering}
 import relationalClustering.representation.domain.{Domain, KnowledgeBase, NumericDomain, Predicate}
 import relationalClustering.utils.Settings
