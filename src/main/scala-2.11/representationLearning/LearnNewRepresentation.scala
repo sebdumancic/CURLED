@@ -3,10 +3,12 @@ package representationLearning
 import java.io.{File, PrintWriter}
 
 import org.clapper.argot.ArgotParser
+import parameters.IterativeCoverage
 import relationalClustering.aggregators._
 import relationalClustering.bags.bagCombination.{IntersectionCombination, UnionCombination}
 import relationalClustering.bags.bagComparison.{ChiSquaredDistance, MaximumSimilarity, MinimumSimilarity, UnionBagSimilarity}
 import relationalClustering.clustering.algo.{Hierarchical, RandomClustering, Spectral}
+import relationalClustering.clustering.evaluation.semisupervised.{ConstraintsContainer, SampleConstraints}
 import relationalClustering.clustering.evaluation.supervised.LabelsContainer
 import relationalClustering.clustering.evaluation.unsupervised.{AverageIntraClusterSimilarity, SilhouetteScore}
 import relationalClustering.representation.domain.KnowledgeBase
@@ -63,12 +65,15 @@ object LearnNewRepresentation {
   val preserveOrder = parser.flag[Boolean](List("preserveVertexOrder"), "if set, preserves vertex order when clustering hyperedges")
   val labels = parser.option[String](List("labels"), "fact labels", "comma-separated list of databases with labels")
   val labelsDomain = parser.option[String](List("labelsDomain"), "string", "domain of objects with labels")
+  val learnParameters = parser.flag[Boolean](List("learnParameters"), "learn parameters from constraints")
+  val numberOfConstraints = parser.option[Int](List("numberOfConstraints"), "n", "number of constraints to sample")
+  val constraintsFile = parser.option[String](List("constraints"), "filepath", "file containing the constraints")
 
 
   def printParameters() = {
     println("CLUSTERING WITH THE FOLLOWING PARAMETERS")
     println(s"---- databases ${dbs.value.get.split(",").toList}")
-    println(s"---- depth: ${depth.value.getOrElse(0)}")
+    println(s"---- depth: ${depth.value.getOrElse(1)}")
     println(s"---- parameter set: ${weights.value.getOrElse("0.2,0.2,0.2,0.2,0.2")}")
     println(s"---- clustering algorithm: ${algorithm.value.getOrElse("Spectral")}")
     println(s"---- similarity measure: ${similarity.value.getOrElse("RCNT")}")
@@ -147,7 +152,28 @@ object LearnNewRepresentation {
       }
     })
 
-    val parameterSets = weights.value.getOrElse("0.2,0.2,0.2,0.2,0.2").split(":").toList.map( par => par.split(",").toList.map( _.toDouble ))
+    val parameterSets = if (learnParameters.value.getOrElse(false)) {
+      require(labels.value.isDefined || constraintsFile.value.isDefined, s"either constraints or labels have to be provided if parameters are being learned (constraints: ${constraintsFile.hasValue}, labels: ${labels.hasValue})")
+
+      val constraints = if (constraintsFile.value.isDefined) {
+        new ConstraintsContainer(constraintsFile.value.get, labelsDomain.value.get, KnowledgeBase, depth.value.getOrElse(1))
+      }
+      else {
+        val constraintsSamples = new SampleConstraints(new LabelsContainer(labels.value.get.split(",")), KnowledgeBase.getDomain(labelsDomain.value.get), KnowledgeBase, depth.value.getOrElse(1))
+        constraintsSamples.sample(numberOfConstraints.value.get)
+      }
+
+      val parameterLearner = new IterativeCoverage(KnowledgeBase, labelsDomain.value.get, constraints, depth.value.getOrElse(1), bagComparison, agregates, rootFolder.value.getOrElse("./layer"))
+      parameterLearner.findParameters()
+    }
+    else {
+      weights.value.getOrElse("0.2,0.2,0.2,0.2,0.2").split(":").toList.map( par => par.split(",").toList.map( _.toDouble ))
+    }
+
+    require(parameterSets.nonEmpty, s"Cannot find a satisfiable parameter sets!")
+    println(s"Parameters sets: $parameterSets")
+
+
     val penalties = tradeOffFactor.value.getOrElse("0.1").contains(",") match {
       case true => tradeOffFactor.value.get.split(",").toList.map( _.toDouble)
       case false => List.fill(numLayers.value.getOrElse(1))(tradeOffFactor.value.get.toDouble)
@@ -210,7 +236,7 @@ object LearnNewRepresentation {
                                               currentFileName,
                                               currentKnowledgeBase,
                                               domainsToCluster,
-                                              depth.value.getOrElse(0),
+                                              depth.value.getOrElse(1),
                                               bagComparison,
                                               bagCombinationMethod,
                                               agregates,
@@ -229,7 +255,7 @@ object LearnNewRepresentation {
                                       currentFileName,
                                       currentKnowledgeBase,
                                       domainsToCluster,
-                                      depth.value.getOrElse(0),
+                                      depth.value.getOrElse(1),
                                       bagComparison,
                                       bagCombinationMethod,
                                       agregates,
