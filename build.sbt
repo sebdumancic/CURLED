@@ -21,8 +21,12 @@ libraryDependencies  ++= Seq(
   // It depends on LGPL code.
   "org.scalanlp" %% "breeze-viz" % "0.11.2",
   //visualization
-  "org.vegas-viz" %% "vegas" % "0.3.8"
+  "org.vegas-viz" %% "vegas" % "0.3.8",
+  //OscaR
+  "oscar" %% "oscar-cp" % "3.1.0"
 )
+
+resolvers += "UCL OscaR Repository" at "http://artifactory.info.ucl.ac.be/artifactory/libs-release/"
 
 assemblyMergeStrategy in assembly := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
