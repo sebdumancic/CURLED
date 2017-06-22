@@ -37,7 +37,7 @@ class IterativeCoverage(protected val knowledgeBase: KnowledgeBase,
 
 
   def findParameters(): List[List[Double]] = {
-    val constraints = mustLinks.foldLeft(Set[Set[List[Int]]]())((acc, ml) => acc ++ coverMustLink(ml, cannotLinks))
+    val constraints = mustLinks.foldLeft(Set[Set[List[Int]]]())((acc, ml) => acc ++ coverMustLink(ml, cannotLinks)).filter(_.nonEmpty)
 
     selectSimilarityInterpretations(constraints)
   }
