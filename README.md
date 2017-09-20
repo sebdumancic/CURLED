@@ -4,13 +4,13 @@ An implementation of the approach introduced in the paper *Clustering-based Unsu
 
 ## Installation
 
-+ get [SBT](http://www.scala-sbt.org/)
-+ clone this repository
-+ download the [ReCeNT](https://bitbucket.org/sdumancic/relationalclusteringoverneighbourhoodtrees) and follow the instruction how to compile it
-+ add the jar in the `lib` folder of this project
-+ position in the root folder of this project and
-  ++ build a jar with dependencies `sbt assembly`
-  ++ build a jar without dependencies `sbt package`
+- get [SBT](http://www.scala-sbt.org/)
+- clone this repository
+- download the [ReCeNT](https://bitbucket.org/sdumancic/relationalclusteringoverneighbourhoodtrees) and follow the instruction how to compile it
+- add the jar in the `lib` folder of this project
+- position in the root folder of this project and
+  - build a jar with dependencies `sbt assembly`
+  - build a jar without dependencies `sbt package`
 
 ## Usage
 
