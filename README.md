@@ -1,6 +1,6 @@
 # Learning Relational Latent Representation with Clustering
 
-An implementation of the approach introduced in the paper `Clustering-based Unsupervised Relational Representation Learning with an Explicit Distributed Representation`, check the original paper for details. Still under development.
+An implementation of the approach introduced in the paper *Clustering-based Unsupervised Relational Representation Learning with an Explicit Distributed Representation*, check the original paper for details. Still under development.
 
 ## Installation
 
@@ -38,7 +38,8 @@ OPTIONS
                                                      
 --kDomain comma-separated list of domain:numClusters   number of clusters per domain (if precise number needed, otherwise leave it to the clustering selection)
                                                        
---linkage [average|complete|ward]                      linkage for hierarchical clustering (use complete for now!)                                                     
+--linkage [average|complete|ward]                      linkage for hierarchical clustering (use complete for now!)
+
 --maxClusters n                                        maximal number of clusters to create, per domain
 
 --minimalCoverage double                               minimal coverage for a definition to be considered as large-coverage (percentage)
