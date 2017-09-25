@@ -257,7 +257,7 @@ object LearnNewRepresentation {
         }
 
         if (labels.value.isDefined) {
-          val stats = new RepresentationStats(currentKnowledgeBase, layerBuilder.getClusteringRepresentation, new LabelsContainer(labels.value.get.split(",")), labelsDomain.value.get)
+          val stats = new RepresentationStats(currentKnowledgeBase, layerBuilder.getClusteringRepresentation, new LabelsContainer(labels.value.get.split(","), labelsDomain.value.get), labelsDomain.value.get)
           stats.generateReport(s"$currentFolder")
         }
         else {
